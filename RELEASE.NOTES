@@ -1,0 +1,59 @@
+2008-09-26 - YubiPAM 1.0.4
+  [*] Improvements
+      * PAM. A small bug crept in with the introduction of yk_chkpwd. Use of
+        the pam_syslog function is apparently privvy to more recent systems.
+        The appropriate checks are now in place. - thanks Brian Gorka
+
+
+2008-09-24 - YubiPAM 1.0.3
+  [*] Improvements
+      * yk_chkpwd. A new binary has been added to ensure complete usability
+        for all users. It was discovered that certain applications, such as
+        gnome-screensaver, with restricted privileges could not access the
+        Yubikey database. The new helper, akin to that of pam_unix, ensures
+        that the Yubikey database is readily accessible to these processes for
+		authentication. - thanks Geoff Hoff
+	
+      * ykvalidate. Updates to the calling and using the new helper binary
+        allows for more intuitive usage of this binary.
+
+      * PAM. The default settings for echoing of the Yubikey OTP is now set to
+        silent, with verbose OTPs requiring the "verbose_otp" flag set int the
+        configuration file. Given that it is a "One Time" pad which will not be
+        used again, it merely follows the best practices of other non-OTP
+        configurations.
+
+
+2008-09-08 - YubiPAM 1.0.2
+  [*] Improvements
+      * PAM. Fixed an issue when stacking YubiPAM with other modules. When
+        YubiPAM was stacked after another module it would retrieve the 
+        authentication token from the preceding module and assume that as the
+        OTP when clearly it wasn't. - thanks Brian Gorka
+
+      * Documentation. Added clearer documentation on building and debugging
+        the YubiPAM code.
+
+
+2008-09-03 - YubiPAM 1.0.1
+  [*] Improvements
+      * ykpasswd. Added additional flags to ease administration of inserting
+        to the database. The minimal flags now require adding a valid OTP and
+        it's corresponding AES key.
+
+
+2008-08-03 - YubiPAM 1.0
+  [*] Initial Release
+      * Manual add/delete from database. Using the ykpasswd tool you can add 
+	    delete yubikey entries from the database (default: /etc/yubikey).
+
+      * Per user accounting. Supports indiviudal user account authorisation.
+	    This is currently limited to one Yubikey dongle per user account.
+
+	  * Single factor sign in. Currently only single factor (ie. Yubikey OTP)
+	    is currently supported. There will be an additional second factor
+		password option added in the near future.
+		
+	  * Static heuristic support. Heuristic support for OTP data deltas is hard
+	    coded. This will be changable in the next minor release.
+	  

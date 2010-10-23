@@ -1,0 +1,112 @@
+
+-------------------------------------------------------------------------------
+1. YubiPAM Introduction
+-------------------------------------------------------------------------------
+
+The YubiPAM module provides a simple, easy to configure, way to integrate the
+Yubikey into your existing user authentication infrastructure. PAM is used by
+GNU/Linux, Solaris and Mac OS X for user authentication.
+
+
+-------------------------------------------------------------------------------
+2. Status
+-------------------------------------------------------------------------------
+
+  1. Manual add/delete from database. Using the ykpasswd tool you can add
+     delete yubikey entries from the database (default: /etc/yubikey).
+
+  2. Per user accounting. Supports indiviudal user account authorisation. This
+     is currently limited to one Yubikey dongle per user account.
+
+  3. Single factor sign in. Currently only single factor (ie. Yubikey OTP) is
+     currently supported. There will be an additional second factor password
+     option added in the near future.
+        
+  4. Static heuristic support. Heuristic support for OTP data deltas is hard
+     coded. This will be changable in the next release.
+
+
+-------------------------------------------------------------------------------
+3. Configuration
+-------------------------------------------------------------------------------
+
+Install it in your PAM setup by adding a line to an appropriate file in the
+director /etc/pam.d/:
+
+  auth sufficient pam_yubikey.so
+
+and ensure pam_yubikey.so is located in /lib/security/
+
+Supported PAM module parameters are:
+
+  "verbose_otp": enable echoing of the OTP, after all it's only a one time pad.
+
+
+-------------------------------------------------------------------------------
+4. Utilities
+-------------------------------------------------------------------------------
+
+ykpasswd
+
+The ykpasswd utility provides administration, insert and removal of entries,
+for the YubiPAM database. The required elements that need to be entered into
+the database include the public UID (fixed modhex portion of an OTP), the AES
+key which can be used to decrypt the token, and the private UID which is found
+after successful decryption of a valid OTP.
+
+If you have apriori knowledge of these values for user joesmith you can enter
+them straight into the command line, using:
+
+# ykpasswd -a -k AESKEY -f PUBLICKEY -p PRIVATEKEY joesmith
+
+Or alteratnively you can just enter the minimum and be prompted to enter the 
+information using:
+
+# ykpasswd -a joesmith
+
+If you don't have the private UID it requires you to decrypt a valid token to
+get the value. Fortunately you can provide a valid OTP and the appropriate AES
+key and let ykpassword determine the public and private UIDs for you, using:
+
+# ykpasswd -a -u joesmith -k AESKEY -o OTP
+
+The "-u" option is an alternative to placing the user name at the end of the
+utility which can be cumbersome if you use the Yubikey to generate an OTP and
+a carriage return is applied too early :)
+
+
+ykvalidate
+
+Once a Yubikey has been successfully added to the YubiPAM database, it can be
+tested using the ykvalidate tool. Simply pass an OTP associated with the
+calling user or specify the actual user and it will confirm if it's VALID or
+NOT.
+
+# ykvalidate OTP
+
+# ykvalidate -u joesmith OTP
+
+
+-------------------------------------------------------------------------------
+5. Troubleshooting
+-------------------------------------------------------------------------------
+
+In the event that the YubiPAM module is not working it may pay to enable debug
+mode in order to sort out any issues. To enable debug mode you must reconfigure
+the project with the --enable-debug option, for example:
+
+# ./configure --enable-debug
+
+Move the newly generated pam_yubikey.so file to /lib/security, or on a 64-bit
+machine to /lib64/security. You'll also have to touch and give appropriate
+permissions to the debug output file using:
+
+# touch /var/run/pam-debug.log 
+# chmod go+w /var/run/pam-debug.log 
+
+Note: On production systems, debug should NOT be turned on due to its verbosity
+and subsequent disclosure of information. As a friendly reminder, the prompt
+will indicate that you are in debug mode by indicating "DEBUG MODE!!!". Once 
+you've successfully debugged your system reconfigure without the --enable-debug
+option and rebuild.
+
