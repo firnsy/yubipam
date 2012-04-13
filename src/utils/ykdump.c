@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Database Dumping Utility
 *
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -41,7 +42,7 @@ int	amroot;
 
 uint8_t	public_uid_bin[PUBLIC_UID_BYTE_SIZE];
 uint8_t	public_uid_bin_size = 0;
-int entry_idx;
+uint32_t entry_idx;
 
 int	mode;
 ykdb_entry entry;
@@ -50,17 +51,17 @@ yk_ticket tkt;
 char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 
 
-extern ykdb_errno;
+extern int ykdb_errno;
+extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
 int showUsage(char *progam_name);
 int showVersion(void);
+void parseCommandLine(int argc, char *argv[]);
 
 void cleanExit(int mode);
 
 int main (int argc, char *argv[])
 {
-	uint8_t				user_exists = 0;
-	struct passwd		*pw;
 	int					ret;
 	int entry_count;
 
@@ -219,6 +220,7 @@ int main (int argc, char *argv[])
 	ykdbDatabaseClose(handle);
 
 	cleanExit(0);
+	return 0;
 }
 
 /*
@@ -309,12 +311,10 @@ static struct option long_options[] = {
    {0, 0, 0, 0}
 };
 
-int parseCommandLine(int argc, char *argv[])
+void parseCommandLine(int argc, char *argv[])
 {
     int ch;                         /* storage var for getopt info */
     int option_index = -1;
-    int isName = 0;
-    int i;
 
     /* just to be sane.. */
     mode = 0;
@@ -347,7 +347,7 @@ int parseCommandLine(int argc, char *argv[])
 
 			case 'u': /* Explicitly defined user */
 	            /* set additional default values for the entry after parsing */
-            	getSHA256(optarg, strlen(optarg), (uint8_t *)&entry.user_hash);
+            	getSHA256((const uint8_t *)optarg, strlen(optarg), (uint8_t *)&entry.user_hash);
 
                 mode |= MODE_SEARCH_USER;
 				break;
@@ -361,16 +361,16 @@ int parseCommandLine(int argc, char *argv[])
 				break;
 
 			case 'f': /* Public UID */
-		        if ( !checkHexString(optarg) )
+		        if ( !checkHexString((const uint8_t *)optarg) )
                 {
-    			    public_uid_bin_size = hexDecode(public_uid_bin, optarg, PUBLIC_UID_BYTE_SIZE);
+    			    public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
 	                getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
 
                 }
-		        else if ( !checkModHexString(optarg) )
+		        else if ( !checkModHexString((const uint8_t *)optarg) )
                 {
-    			    public_uid_bin_size = modHexDecode(public_uid_bin, optarg, PUBLIC_UID_BYTE_SIZE);
+    			    public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
     	            getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
                 }

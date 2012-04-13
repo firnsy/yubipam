@@ -15,7 +15,7 @@ GNU/Linux, Solaris and Mac OS X for user authentication.
   1. Manual add/delete from database. Using the ykpasswd tool you can add
      delete yubikey entries from the database (default: /etc/yubikey).
 
-  2. Per user accounting. Supports indiviudal user account authorisation. This
+  2. Per user accounting. Supports individual user account authorisation. This
 	 is currently limited to one Yubikey dongle per user account.
 
   3. Single factor sign in. Currently only single factor (ie. Yubikey OTP) is

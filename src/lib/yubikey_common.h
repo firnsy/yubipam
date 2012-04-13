@@ -1,9 +1,9 @@
 /*
 * YubiKey PAM Common API
 *
-* Copyright (C) 2008-2010 Ian Firns      <firnsy@securixlive.com>
-* Copyright (C) 2008-2010 SecurixLive    <dev@securixlive.com>
-*
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by

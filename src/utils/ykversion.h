@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Validate Module
 *
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -23,10 +24,9 @@
 #ifndef __YK_VERSION_H__
 #define __YK_VERSION_H__
 
-
-#define VER_MAJOR			"1"
-#define VER_MINOR			"1-beta1"
-#define VER_REVISION		"0"
-#define VER_BUILD			"101"
+#define VER_MAJOR "1"
+#define VER_MINOR "2"
+#define VER_REVISION "0"
+#define VER_BUILD "102"
 
 #endif /* __YK_VERSION_H__*/ 

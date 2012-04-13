@@ -1,3 +1,12 @@
+2012-04-13 - pam-yubikey 1.2
+  [*] Changed fork version 1.1-beta1 to version 1.2
+  [*] Improvements
+      * Fixed a lot of typecast issues
+      * Added CFLAGS for -Wall option
+      * Let CHKPWD_HELPER use sbindir as path
+      * Cleaned up code and compiles clean
+      * Cleaned up autotools configuration
+
 2008-09-26 - YubiPAM 1.0.4
   [*] Improvements
       * PAM. A small bug crept in with the introduction of yk_chkpwd. Use of

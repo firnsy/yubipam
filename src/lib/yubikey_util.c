@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Utils Module
 *
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -205,7 +206,7 @@ uint8_t xtime(unsigned char b)
 int checkHexString(const uint8_t *src)
 {
     char                trans[] = HEX_MAP;
-	uint32_t			src_size = strlen(src);
+	uint32_t			src_size = strlen((const char *)src);
     uint32_t            i;
  
     for(i=0; i<src_size; i++, src++)
@@ -233,7 +234,7 @@ int checkHexString(const uint8_t *src)
 int checkModHexString(const uint8_t *src)
 {
     char                trans[] = MODHEX_MAP;
-	uint32_t			src_size = strlen(src);
+	uint32_t			src_size = strlen((const char *)src);
     uint32_t            i;
  
     for(i=0; i<src_size; i++, src++)
@@ -268,7 +269,7 @@ int checkOTPCompliance(const uint8_t *otp, uint32_t min_pub_uid_len)
 	if ( otp == NULL )
 		return -1;
 
-	otp_size = strlen(otp);
+	otp_size = strlen((const char *)otp);
 
 	/* check length */
 	if ( otp_size < (min_pub_uid_len + 32) )
@@ -303,7 +304,7 @@ uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size)
 	uint8_t      		b;
 	uint32_t			i,
 						processed = 0;
-	uint32_t			src_size = strlen(src);
+	uint32_t			src_size = strlen((const char *)src);
 	char				*p1;
 
 	/* truncate source if destination is too short */
@@ -313,7 +314,7 @@ uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size)
 	for (i = 0; i < src_size; i++, src++)
 	{
 		/* translate the modhex character, set to 0 if not found */
-		if (p1 = strchr(trans, tolower(*src)))
+		if ( (p1 = strchr(trans, tolower(*src))) )
 			b = (uint8_t) (p1 - trans);
 		else
 			b = 0;
@@ -354,7 +355,7 @@ uint32_t modHexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size)
 	uint8_t      		b;
 	uint32_t			i,
 						processed = 0;
-	uint32_t			src_size = strlen(src);
+	uint32_t			src_size = strlen((const char *)src);
 	char				*p1;
 
 	/* truncate source if destination is too short */
@@ -364,7 +365,7 @@ uint32_t modHexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size)
 	for (i = 0; i < src_size; i++, src++)
 	{
 		/* translate the modhex character, set to 0 if not found */
-		if (p1 = strchr(trans, tolower(*src)))
+		if ( (p1 = strchr(trans, tolower(*src))) )
 			b = (uint8_t) (p1 - trans);
 		else
 			b = 0;
@@ -395,7 +396,7 @@ uint32_t modHexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size)
 **   const uint8_t *key			encryption key
 **   const uint8_t *iv			IV for first block
 */
-int aesEncryptCBC(uint8_t *data, uint32_t data_size, const uint8_t *key, const uint8_t *iv)
+void aesEncryptCBC(uint8_t *data, uint32_t data_size, const uint8_t *key, const uint8_t *iv)
 {
 	const uint8_t		*ivec = iv;
 	uint32_t			i;
@@ -436,7 +437,7 @@ int aesEncryptCBC(uint8_t *data, uint32_t data_size, const uint8_t *key, const u
 **   const uint8_t *key			decryption key
 **   const uint8_t *iv			IV for first block
 */
-int aesDecryptCBC(uint8_t *data, uint32_t data_size, const uint8_t *key, const uint8_t *iv)
+void aesDecryptCBC(uint8_t *data, uint32_t data_size, const uint8_t *key, const uint8_t *iv)
 {
 	uint8_t				ivec[AES_BLOCK_SIZE];
 	uint8_t				iv_next[AES_BLOCK_SIZE];

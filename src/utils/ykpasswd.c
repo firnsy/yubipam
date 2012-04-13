@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Passwd Module
 *
-* Copyright (C) 2008-2010 Ian Firns     firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive   dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -60,20 +61,24 @@ ykdb_h     *handle;
 yk_ticket  tkt;
 char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 
-extern ykdb_errno;
+extern int ykdb_errno;
+extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
 char *getInput(const char *, int, int, uint8_t);
 struct passwd *getPWEnt(void);
 int showUsage(char *progam_name);
 int showVersion(void);
-
+void parseCommandLine(int argc, char *argv[]);
+int getPublicUID(void);
+int addYubikeyEntry(void);
+int updateYubikeyEntry(void);
+int deleteYubikeyEntry(void);
 void cleanExit(int mode);
 
 int main (int argc, char *argv[])
 {
     uint8_t             user_exists = 0;
     struct passwd       *pw;
-    int                 retval;
     
 
     /* save the program name */
@@ -117,7 +122,7 @@ int main (int argc, char *argv[])
     }
 
     /* set additional default values for the entry after parsing */
-    getSHA256(user_text, strlen(user_text), (uint8_t *)&entry.user_hash);
+    getSHA256((const uint8_t *)user_text, strlen(user_text), (uint8_t *)&entry.user_hash);
 
     /* get passwd structure for desired user */
     pw = getpwnam(user_text);
@@ -201,6 +206,7 @@ int main (int argc, char *argv[])
     fprintf(stdout, "Completed successfully.\n");
 
     cleanExit(0);
+    return 0;
 }
 
 /*
@@ -315,12 +321,10 @@ static struct option long_options[] = {
    {0, 0, 0, 0}
 };
 
-int parseCommandLine(int argc, char *argv[])
+void parseCommandLine(int argc, char *argv[])
 {
     int ch;                         /* storage var for getopt info */
     int option_index = -1;
-    int isName = 0;
-    int i;
 
     /* just to be sane.. */
     mode = MODE_UPDATE;
@@ -402,7 +406,7 @@ int parseCommandLine(int argc, char *argv[])
 int getPublicUID(void)
 {
     if (NULL != otp)
-        parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, otp, NULL);
+        parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, NULL);
         
     /* obtain the private_uid if not already defined and store the hash */
     if ( NULL == public_uid_text && public_uid_bin_size <= 0 )
@@ -413,7 +417,7 @@ int getPublicUID(void)
     if ( NULL != public_uid_text && public_uid_bin_size <= 0 )
     {
         /* decode the public uid if in hex format */
-        if ( ! checkHexString(public_uid_text) )
+        if ( ! checkHexString((const uint8_t *)public_uid_text) )
         {
             if ( strlen(public_uid_text) > 32 )
             {
@@ -421,10 +425,10 @@ int getPublicUID(void)
                 return -1;
             }
 
-            public_uid_bin_size = hexDecode(public_uid_bin, public_uid_text, PUBLIC_UID_BYTE_SIZE);
+            public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)public_uid_text, PUBLIC_UID_BYTE_SIZE);
         }
         /* decode the public uid if in modhex format */
-        else if ( ! checkModHexString(public_uid_text) )
+        else if ( ! checkModHexString((const uint8_t *)public_uid_text) )
         {
             if ( strlen(public_uid_text) > 32 )
             {
@@ -432,7 +436,7 @@ int getPublicUID(void)
                 return -1;
             }
 
-            public_uid_bin_size = modHexDecode(public_uid_bin, public_uid_text, PUBLIC_UID_BYTE_SIZE);
+            public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)public_uid_text, PUBLIC_UID_BYTE_SIZE);
         }
         else
         {
@@ -465,10 +469,10 @@ int addYubikeyEntry(void)
     
     if (NULL != key_text)
     {
-        if ( !checkHexString(key_text) )
-            hexDecode((uint8_t *)&entry.ticket.key, key_text, KEY_BYTE_SIZE);
-        else if ( ! checkModHexString(key_text) )
-            modHexDecode((uint8_t *)&entry.ticket.key, key_text, KEY_BYTE_SIZE);
+        if ( !checkHexString((const uint8_t *)key_text) )
+            hexDecode((uint8_t *)&entry.ticket.key, (const uint8_t *)key_text, KEY_BYTE_SIZE);
+        else if ( ! checkModHexString((const uint8_t *)key_text) )
+            modHexDecode((uint8_t *)&entry.ticket.key, (const uint8_t *)key_text, KEY_BYTE_SIZE);
         else
         {
             printf("Invalid key specified!\n");
@@ -486,7 +490,7 @@ int addYubikeyEntry(void)
     if ( NULL != otp )
     {
         /* decode the OTP */
-        if ( parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, otp, entry.ticket.key ) != 0 )
+        if ( parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, entry.ticket.key ) != 0 )
         {
             printf("Invalid OTP specified!\n");
             return -1;
@@ -524,10 +528,10 @@ int addYubikeyEntry(void)
 
     if ( NULL != private_uid_text && private_uid_bin_size <= 0 )
     {
-        if ( ! checkHexString(private_uid_text) )
-            hexDecode(private_uid_bin, private_uid_text, PRIVATE_UID_BYTE_SIZE);
-        else if ( ! checkModHexString(private_uid_text) )
-            modHexDecode(private_uid_bin, private_uid_text, PRIVATE_UID_BYTE_SIZE);
+        if ( ! checkHexString((const uint8_t *)private_uid_text) )
+            hexDecode(private_uid_bin, (const uint8_t *)private_uid_text, PRIVATE_UID_BYTE_SIZE);
+        else if ( ! checkModHexString((const uint8_t *)private_uid_text) )
+            modHexDecode(private_uid_bin, (const uint8_t *)private_uid_text, PRIVATE_UID_BYTE_SIZE);
         else
         {
             printf("Invalid UID specified!\n");
@@ -543,13 +547,13 @@ int addYubikeyEntry(void)
     getSHA256(private_uid_bin, PRIVATE_UID_BYTE_SIZE, (uint8_t *)&entry.ticket.private_uid_hash);
 
     /* encrypt entry as required */
-    safeSnprintf(ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
+    safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
 
     if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID )
     {
-        safeSnprintfAppend(ticket_enc_key, 256, "|", public_uid_bin);
+        safeSnprintfAppend((char *)ticket_enc_key, 256, "|", public_uid_bin);
         for(i=0; i<public_uid_bin_size; i++)
-            safeSnprintfAppend(ticket_enc_key, 256, "%02x", public_uid_bin[i]);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "%02x", public_uid_bin[i]);
     }
     
     if ( entry.flags & YKDB_TOKEN_ENC_PASSCODE )
@@ -559,12 +563,12 @@ int addYubikeyEntry(void)
         
         if ( NULL != passcode_text )
         {
-            getSHA256(passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
-            safeSnprintfAppend(ticket_enc_key, 256, "|%s", passcode_text);
+            getSHA256((const uint8_t *)passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode_text);
         }
     }
     
-    safeSnprintfAppend(ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
+    safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
 
 #ifdef DEBUG
     printf("Using encryption key: %s\n", ticket_enc_key);
@@ -573,7 +577,7 @@ int addYubikeyEntry(void)
     if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID ||
          entry.flags & YKDB_TOKEN_ENC_PASSCODE )
     {
-        getSHA256(ticket_enc_key, strlen(ticket_enc_key), ticket_enc_hash);
+        getSHA256((const uint8_t *)ticket_enc_key, strlen((const char *)ticket_enc_key), ticket_enc_hash);
         aesEncryptCBC((uint8_t *)&entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_hash, ticket_enc_hash+16);
     }
 
@@ -605,13 +609,13 @@ int updateYubikeyEntry(void)
         return 1;
 
     /* decrypt entry before updating */
-    safeSnprintf(ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
+    safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
 
     if ( tmp_entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID )
     {
-        safeSnprintfAppend(ticket_enc_key, 256, "|", public_uid_bin);
+        safeSnprintfAppend((char *)ticket_enc_key, 256, "|", public_uid_bin);
         for(i=0; i<public_uid_bin_size; i++)
-            safeSnprintfAppend(ticket_enc_key, 256, "%02x", public_uid_bin[i]);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "%02x", public_uid_bin[i]);
     }
     
     if ( tmp_entry.flags & YKDB_TOKEN_ENC_PASSCODE )
@@ -621,17 +625,17 @@ int updateYubikeyEntry(void)
         
         if (passcode_text != NULL)
         {
-            getSHA256(passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
-            safeSnprintfAppend(ticket_enc_key, 256, "|%s", passcode_text);
+            getSHA256((const uint8_t *)passcode_text, strlen((const char *)passcode_text), (uint8_t *)&entry.passcode_hash);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode_text);
         }
     
         if ( memcmp(tmp_entry.passcode_hash, entry.passcode_hash, 32) )
             return 1;
     }
     
-    safeSnprintfAppend(ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
+    safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
 
-    getSHA256(ticket_enc_key, strlen(ticket_enc_key), ticket_enc_hash);
+    getSHA256((const uint8_t *)ticket_enc_key, strlen((const char *)ticket_enc_key), ticket_enc_hash);
     aesDecryptCBC((uint8_t *)&tmp_entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_key, ticket_enc_key+16);
 
     return 0;
@@ -651,13 +655,13 @@ int deleteYubikeyEntry(void)
         return 1;
 
     /* decrypt entry as required */
-    safeSnprintf(ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
+    safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
 
     if ( tmp_entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID )
     {
-        safeSnprintfAppend(ticket_enc_key, 256, "|", public_uid_bin);
+        safeSnprintfAppend((char *)ticket_enc_key, 256, "|", public_uid_bin);
         for(i=0; i<public_uid_bin_size; i++)
-            safeSnprintfAppend(ticket_enc_key, 256, "%02x", public_uid_bin[i]);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "%02x", public_uid_bin[i]);
     }
     
     if ( tmp_entry.flags & YKDB_TOKEN_ENC_PASSCODE )
@@ -667,17 +671,17 @@ int deleteYubikeyEntry(void)
         
         if (passcode_text != NULL)
         {
-            getSHA256(passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
-            safeSnprintfAppend(ticket_enc_key, 256, "|%s", passcode_text);
+            getSHA256((const uint8_t *)passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode_text);
         }
     
         if ( memcmp(tmp_entry.passcode_hash, entry.passcode_hash, 32) )
             return 1;
     }
     
-    safeSnprintfAppend(ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
+    safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
 
-    getSHA256(ticket_enc_key, strlen(ticket_enc_key), ticket_enc_hash);
+    getSHA256(ticket_enc_key, strlen((const char *)ticket_enc_key), ticket_enc_hash);
     aesDecryptCBC((uint8_t *)&tmp_entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_key, ticket_enc_key+16);
 
 #ifdef DEBUG
@@ -695,12 +699,11 @@ int deleteYubikeyEntry(void)
 
 char * getInput(const char *prompt, int size, int required, uint8_t flags)
 {
-    int bytes_read;
+    int bytes_read = 0;
     char *answer;
     size_t gl_size = size;
 
     struct termios old, new;
-    int nread;
                                
     /* get terminal attributes and fail if we can't */
     if ( tcgetattr(fileno(stdin), &old) != 0 )

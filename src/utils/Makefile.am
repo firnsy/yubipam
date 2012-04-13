@@ -15,5 +15,6 @@ ykvalidate_LDADD = ../lib/libyubipam.la
 yk_chkpwd_SOURCES = yk_chkpwd.c
 yk_chkpwd_LDADD = ../lib/libyubipam.la
 
+AM_CFLAGS = -Wall
 INCLUDES = -I../ -I../lib
 

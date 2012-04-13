@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Validate Module
 *
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -56,9 +57,10 @@ char *user = NULL;
 char *otp = NULL;
 
 void cleanExit(int);
-int parseCommandLine(int, char **);
+void parseCommandLine(int, char **);
 struct passwd *getPWEnt(void);
 void showUsage(char *);
+int showVersion(void);
 char *getInput(const char *, int, int, uint8_t);
 static int _yubi_run_helper_binary(const char *, const char *);
 
@@ -131,6 +133,7 @@ int main(int argc, char *argv[])
 	}
 
 	cleanExit(ret);
+	return 0;
 }
 
 void showUsage(char *program_name)
@@ -185,12 +188,10 @@ static struct option long_options[] = {
    {0, 0, 0, 0}
 };
 
-int parseCommandLine(int argc, char *argv[])
+void parseCommandLine(int argc, char *argv[])
 {
     int ch;                         /* storage var for getopt info */
     int option_index = -1;
-    int isName = 0;
-    int i;
 
     /* just to be sane.. */
     mode = MODE_VALIDATE;
@@ -253,12 +254,11 @@ struct passwd *getPWEnt(void)
 
 char * getInput(const char *prompt, int size, int required, uint8_t flags)
 {
-    int bytes_read;
+    int bytes_read = 0;
     char *answer;
     size_t gl_size = size;
 
     struct termios old, new;
-    int nread;
                                
     /* get terminal attributes and fail if we can't */
     if ( tcgetattr(fileno(stdin), &old) != 0 )
@@ -313,7 +313,6 @@ char * getInput(const char *prompt, int size, int required, uint8_t flags)
 #endif
 
 #define MAX_FD_NO 10000
-#define CHKPWD_HELPER "/sbin/yk_chkpwd"
 
 // this code is from Linux-PAM pam_unix support.c
 static int _yubi_run_helper_binary(const char *otp_passcode, const char *user)
@@ -397,7 +396,6 @@ static int _yubi_run_helper_binary(const char *otp_passcode, const char *user)
 		/* wait for child */
 		/* if the stored password is NULL */
         int				rc = 0;
-        int dummy;
 
 		if (otp_passcode != NULL) 	/* send the OTP/passcode to the child */
 		{

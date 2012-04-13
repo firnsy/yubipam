@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Utils Module
 *
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -50,8 +51,8 @@ int checkOTPCompliance(const uint8_t *, uint32_t);
 /* cipher/ routines */
 void aesEncryptBlock(uint8_t *, const uint8_t *);
 void aesDecryptBlock(uint8_t *, const uint8_t *);
-int aesEncryptCBC(uint8_t *, uint32_t, const uint8_t *, const uint8_t *);
-int aesDecryptCBC(uint8_t *, uint32_t, const uint8_t *, const uint8_t *);
+void aesEncryptCBC(uint8_t *, uint32_t, const uint8_t *, const uint8_t *);
+void aesDecryptCBC(uint8_t *, uint32_t, const uint8_t *, const uint8_t *);
 void getSHA256(const uint8_t *, uint32_t, uint8_t *);
 uint16_t getCRC(const uint8_t *, uint32_t);
 

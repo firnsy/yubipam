@@ -13,7 +13,7 @@ AC_PREREQ(2.59)
 AC_COPYRIGHT([
 See the included file: COPYING for copyright information.
 ])
-AC_INIT(src/pam_yubikey.c, 1.1, [jeroen@jeroennijhof.nl])
+AC_INIT(src/pam_yubikey.c, 1.2, [jeroen@jeroennijhof.nl])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/pam_yubikey.c])
@@ -28,6 +28,7 @@ AC_PROG_MAKE_SET
 AM_PROG_LIBTOOL
 
 AC_SUBST(PAMDIR, "/lib/security")
+AC_DEFINE_UNQUOTED([CHKPWD_HELPER], ["${sbindir}/yk_chkpwd"], [Location of yk_chkpwd])
 
 AC_ARG_ENABLE(debug,
 	[  --enable-debug           Enable debugging options (bugreports and developers only)],

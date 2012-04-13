@@ -1,8 +1,9 @@
 /*
 * YubiKey DB API
 *
-* Copyright (C) 2008-2010 SecurixLive   dev@securixlive.com
-* Copyright (C) 2008-2010 Ian Firns     firnsy@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
 
 #include "yubikey_db.h"
 
@@ -184,6 +186,43 @@ ykdb_h *ykdbDatabaseOpenReadOnly(const char *path)
     }
 
     return handle;
+}
+
+int ykdbHeaderWrite(ykdb_h *handle)
+{
+    off_t               old_pos;
+
+    /* check arguments sanity */
+    if (handle == NULL) 
+    {
+        YKDB_ERROR_RET(YKDB_ERR_ARGS);
+    }
+    
+    old_pos = lseek(handle->file_descriptor, 0, SEEK_CUR);
+
+    /* seek to database header (ie. start of file) */
+    if ( lseek(handle->file_descriptor, 0, SEEK_SET) == -1 )
+    {
+        YKDB_ERROR_RET(YKDB_ERR_IO);
+    }
+
+    header2NBO(&handle->header);
+
+    /* write header to disk */
+    if ( write(handle->file_descriptor, &handle->header, sizeof(ykdb_header)) != sizeof(ykdb_header) )
+    {
+        YKDB_ERROR_RET(YKDB_ERR_IO);
+    }
+
+    header2HBO(&handle->header);
+    
+    /* return to old position */
+    if ( lseek(handle->file_descriptor, old_pos, SEEK_SET) == -1 )
+    {
+        YKDB_ERROR_RET(YKDB_ERR_IO);
+    }
+
+    return YKDB_SUCCESS;
 }
 
 ykdb_h *ykdbDatabaseCreate(const char *path)
@@ -393,7 +432,7 @@ int ykdbEntrySeekOnIndex(ykdb_h *handle, uint32_t idx)
 
 int ykdbEntryGetIndex(ykdb_h *handle, uint32_t *idx)
 {
-    int index;
+    uint32_t index;
 
     /* check arguments sanity */
     if (handle == NULL || idx == NULL) 
@@ -538,47 +577,9 @@ int ykdbEntryWrite(ykdb_h *handle, ykdb_entry *entry)
 
 }
 
-int ykdbHeaderWrite(ykdb_h *handle)
-{
-    off_t               old_pos;
-
-    /* check arguments sanity */
-    if (handle == NULL) 
-    {
-        YKDB_ERROR_RET(YKDB_ERR_ARGS);
-    }
-    
-    old_pos = lseek(handle->file_descriptor, 0, SEEK_CUR);
-
-    /* seek to database header (ie. start of file) */
-    if ( lseek(handle->file_descriptor, 0, SEEK_SET) == -1 )
-    {
-        YKDB_ERROR_RET(YKDB_ERR_IO);
-    }
-
-    header2NBO(&handle->header);
-
-    /* write header to disk */
-    if ( write(handle->file_descriptor, &handle->header, sizeof(ykdb_header)) != sizeof(ykdb_header) )
-    {
-        YKDB_ERROR_RET(YKDB_ERR_IO);
-    }
-
-    header2HBO(&handle->header);
-    
-    /* return to old position */
-    if ( lseek(handle->file_descriptor, old_pos, SEEK_SET) == -1 )
-    {
-        YKDB_ERROR_RET(YKDB_ERR_IO);
-    }
-
-    return YKDB_SUCCESS;
-}
-
 int ykdbEntrySeekEmpty(ykdb_h *handle)
 {
     int                 i;
-    off_t               old_pos;
     ykdb_entry          entry;
 
     /* check argument sanity */
@@ -616,8 +617,8 @@ int ykdbEntrySeekEmpty(ykdb_h *handle)
 /* Extended functions */
 int ykdbEntrySeekOnUserHash(ykdb_h *handle, uint8_t *user_hash, uint8_t flags)
 {
-    int                 i = 0;
-    off_t               old_pos;
+    uint32_t                 i = 0;
+    off_t               old_pos = 0;
     ykdb_entry          entry;
     int ret;
 
@@ -678,8 +679,8 @@ int ykdbEntrySeekOnUserHash(ykdb_h *handle, uint8_t *user_hash, uint8_t flags)
 
 int ykdbEntrySeekOnPublicHash(ykdb_h *handle, uint8_t *public_uid_hash, uint8_t flags)
 {
-    int                 i = 0;
-    off_t               old_pos;
+    uint32_t                 i = 0;
+    off_t               old_pos = 0;
     ykdb_entry          entry;
     int ret;
 
@@ -740,8 +741,8 @@ int ykdbEntrySeekOnPublicHash(ykdb_h *handle, uint8_t *public_uid_hash, uint8_t 
 
 int ykdbEntrySeekOnUserPublicHash(ykdb_h *handle, uint8_t *user_hash, uint8_t *public_uid_hash, uint8_t flags)
 {
-    int                 i = 0;
-    off_t               old_pos;
+    uint32_t                 i = 0;
+    off_t               old_pos = 0;
     ykdb_entry          entry;
     int ret;
 

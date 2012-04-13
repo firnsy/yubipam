@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Module
 *
-* Copyright (C) 2008-2010 Ian Firns      <firnsy@securixlive.com>
-* Copyright (C) 2008-2010 SecurixLive    <dev@securixlive.com>
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -280,7 +281,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
         return PAM_CRED_INSUFFICIENT;
     }
     
-	D("OTP: %s (%d), Passcode: %s (%d)", otp ? otp:"", otp_len, passcode ? passcode:"", passcode_len);
+	D("OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len);
 
     /* perform initial parse to grab public UID */
     parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, NULL);
