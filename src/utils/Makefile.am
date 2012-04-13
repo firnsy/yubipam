@@ -3,8 +3,6 @@ AUTOMAKE_OPTIONS=foreign no-dependencies
 bin_PROGRAMS = ykvalidate ykdump
 sbin_PROGRAMS = ykpasswd yk_chkpwd
 
-sbindir = /sbin
-
 ykpasswd_SOURCES = ykpasswd.c ykpasswd.h ykversion.h
 ykpasswd_LDADD = ../lib/libyubipam.la
 
