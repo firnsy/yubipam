@@ -8,6 +8,8 @@ pam_yubikey_la_SOURCES = pam_yubikey.c
 pam_yubikey_la_LDFLAGS = -module -avoid-version
 pam_yubikey_la_LIBADD = lib/libyubipam.la -lpam
 
+INCLUDES = -Ilib
+
 # Self tests
 AM_LDFLAGS = -no-install
 LDADD = ./pam_yubikey.la -lpam
