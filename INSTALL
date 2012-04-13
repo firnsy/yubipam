@@ -1,0 +1,109 @@
+
+-------------------------------------------------------------------------------
+1. YubiPAM Quick Install
+-------------------------------------------------------------------------------
+
+The "generic" notes for putting this thing together are below.  Here's the
+short version.
+
+The quick install notes for getting people up and running in with minimal fuss
+are below. Detailed instructions will follow later.
+
+1.   *** Make sure you have PAM library HEADERS installed!!! ***
+2.   ./configure
+3.   make
+4.   make install
+5.   addgroup yubiauth
+6.   touch /etc/yubikey
+7.   chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
+8.   chmod g+rw /etc/yubikey
+9.   chmod g+s /sbin/yk_chkpwd
+10.  update the appropriate /etc/pam.d/* file (see README)
+11.  Have fun!
+
+
+-------------------------------------------------------------------------------
+2. YubiPAM Configure-time switches
+-------------------------------------------------------------------------------
+
+`--enable-debug'
+    Enable debugging options (bugreports and developers only).
+     
+`--with-authdb=DIR'
+	Select the default authentication database (default: /etc/yubikey).
+
+`--with-pam-lib=DIR'
+    Where to install the PAM library module (default: /lib/security)
+    
+    
+-------------------------------------------------------------------------------
+3. Detailed Installation
+-------------------------------------------------------------------------------
+
+These are generic installation instructions.
+
+The 'configure' shell script attempts to guess correct values for various
+system-dependent variables used during compilation. It uses those values to
+create a 'Makefile' in each directory of the package. It may also create one or
+more '.h' files containing system-dependent definitions. Finally, it creates a
+shell script 'config.status' that you can run in the future to recreate the
+current configuration, a file 'config.cache' that saves the results of its
+tests to speed up reconfiguring, and a file 'config.log' containing compiler
+output (useful mainly for debugging 'configure').
+
+If you need to do unusual things to compile the package, please try to figure
+out how 'configure' could check whether to do them, and mail diffs or
+instructions to the address given in the 'README' so they can be considered for
+the next release. If at some point 'config.cache' contains results you don't
+want to keep, you may remove or edit it.
+
+The file 'configure.in' is used to create 'configure' by a program called 
+'autoconf'. You only need `configure.in' if you want to change it or regenerate
+'configure' using a newer version of 'autoconf'. 
+
+The simplest way to compile this package is:
+
+  As a normal user:
+
+  1.  "cd" to the directory containing the package's source code and type
+      "./configure" to configure the package for your system.  If you're
+      using "csh" on an old version of System V, you might need to type
+      "sh ./configure" instead to prevent "csh" from trying to execute
+      "configure" itself.
+
+      Running "configure" takes awhile.  While running, it prints some
+      messages telling which features it is checking for.
+
+  2.  Type "make" to compile the package.
+
+  3.  Optionally, type "make check" to run any self-tests that come with
+      the package.
+
+  As the root user:
+
+  4.  Type "make install" to install the programs and any data files and
+      documentation.
+
+  5.  Add the YubiPAM authority group with "addgroup yubiauth".
+
+  6.  Touch the database file with "touch /etc/yubikey" in the event it has
+      not yet been created.
+
+  7.  Change the groups of "/etc/yubikey" and "/sbin/yk_chkpwd" to allow
+      unified editing of the database with 
+	  "chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd"
+
+  8.  chmod g+rw /etc/yubikey
+
+  9.  chmod g+s /sbin/yk_chkpwd
+
+  10. You can remove the program binaries and object files from the
+      source code directory by typing "make clean".  To also remove the
+      files that "configure" created (so you can compile the package for
+      a different kind of computer), type "make distclean".  There is
+      also a "make maintainer-clean" target, but that is intended mainly
+      for the package's developers.  If you use it, you may have to get
+      all sorts of other programs in order to regenerate files that came
+      with the distribution.
+
+
