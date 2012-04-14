@@ -249,7 +249,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
      
     /* OTP needs the public UID for lookup */
     if (public_uid_bin_size <= 0) {
-        D((LOG_DEBUG, "public_uid has no length, OTP is invalid", ""));
+        D((LOG_DEBUG, "public_uid has no length, OTP is invalid"));
         return PAM_CRED_INSUFFICIENT;
     }
 
@@ -325,7 +325,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* match private uid hashes */
     if ( memcmp(&tkt_private_uid_hash, &entry.ticket.private_uid_hash, 32) ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "private uid mismatch", ""));
+        D((LOG_DEBUG, "private uid mismatch"));
         return PAM_AUTH_ERR;
     }
 
