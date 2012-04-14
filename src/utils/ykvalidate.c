@@ -47,11 +47,11 @@
 #if defined(DEBUG) && defined(HAVE_SECURITY__PAM_MACROS_H)
 #include <security/_pam_macros.h>
 #else
-#define D(x)			/* nothing */
+#define D(x)            /* nothing */
 #endif
 
-char	*progname;
-int		mode;
+char    *progname;
+int        mode;
 
 char *user = NULL;
 char *otp = NULL;
@@ -66,47 +66,47 @@ static int _yubi_run_helper_binary(const char *, const char *);
 
 int main(int argc, char *argv[])
 {
-	int	ret = 0;
+    int    ret = 0;
 
     char otp_passcode[128];
     char *passcode = NULL;
 
     struct passwd *pw;
 
-	progname = argv[0];
-	parseCommandLine(argc, argv);
+    progname = argv[0];
+    parseCommandLine(argc, argv);
 
-	if (mode & MODE_VALIDATE)
-	{
-	    if ( NULL == user )
-	    {
-			/* get passwd structure for current user */
-			pw = getPWEnt();
+    if (mode & MODE_VALIDATE)
+    {
+        if ( NULL == user )
+        {
+            /* get passwd structure for current user */
+            pw = getPWEnt();
  
-			if ( NULL == pw )
-			{
-				fprintf(stderr, "Can't determine your user name!\n");
-		        cleanExit(1);
-		    }
-			
-	        user = strdup(pw->pw_name);
-	    }
+            if ( NULL == pw )
+            {
+                fprintf(stderr, "Can't determine your user name!\n");
+                cleanExit(1);
+            }
+            
+            user = strdup(pw->pw_name);
+        }
  
-	    /* get passwd structure for desired user */
-		pw = getpwnam(user);
-	 
-		if ( NULL == pw )
-		{
-			fprintf(stderr, "Unknown user: %s\n", user);
-		    cleanExit(1);
-		}
-	 
-	    if (otp == NULL)
-	    {
-		    fprintf(stderr, "You must at least provide an OTP!\n\n");
-		    showUsage(progname);
-		    cleanExit(1);
-	    }
+        /* get passwd structure for desired user */
+        pw = getpwnam(user);
+     
+        if ( NULL == pw )
+        {
+            fprintf(stderr, "Unknown user: %s\n", user);
+            cleanExit(1);
+        }
+     
+        if (otp == NULL)
+        {
+            fprintf(stderr, "You must at least provide an OTP!\n\n");
+            showUsage(progname);
+            cleanExit(1);
+        }
 
         if ( mode & MODE_PASSCODE )
         {
@@ -114,26 +114,26 @@ int main(int argc, char *argv[])
         }
 
         snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-		ret = _yubi_run_helper_binary(otp_passcode, user);
+        ret = _yubi_run_helper_binary(otp_passcode, user);
 
         printf("%s: ", user);
 
-		if (ret != PAM_SUCCESS)	
-			printf("OTP is INVALID!\n");
-		else
-			printf("OTP is VALID.\n");
-	}
-	else if (mode == MODE_USAGE)
-	{
-		showUsage(progname);
-	}
-	else if (mode == MODE_VERSION)
-	{
-		showVersion();
-	}
+        if (ret != PAM_SUCCESS)    
+            printf("OTP is INVALID!\n");
+        else
+            printf("OTP is VALID.\n");
+    }
+    else if (mode == MODE_USAGE)
+    {
+        showUsage(progname);
+    }
+    else if (mode == MODE_VERSION)
+    {
+        showVersion();
+    }
 
-	cleanExit(ret);
-	return 0;
+    cleanExit(ret);
+    return 0;
 }
 
 void showUsage(char *program_name)
@@ -141,7 +141,7 @@ void showUsage(char *program_name)
     fprintf(stdout, "USAGE: %s [-u|--user USER] OTP\n", program_name);
     fprintf(stdout, "   -c          Prompt for second factor pass code\n");
     fprintf(stdout, "   -u <user>   Apply configuration to <user>\n");
-	fprintf(stdout, "\n");
+    fprintf(stdout, "\n");
     fprintf(stdout, "Longname options and their corresponding single char version\n");
     fprintf(stdout, "   --user <user>   Same as -u\n");
     fprintf(stdout, "   --help          Same as -?\n");
@@ -152,11 +152,11 @@ void showUsage(char *program_name)
 void cleanExit(int mode)
 {
     /* free any and all allocated memory */
-	free(user);
-	free(otp);
+    free(user);
+    free(otp);
 
     /* exit as required */
-	exit(mode);
+    exit(mode);
 }
 
 /*
@@ -168,12 +168,12 @@ void cleanExit(int mode)
 int showVersion(void)
 {
     fprintf(stderr, "\n"
-   					"ykvalidate - Yubikey OTP/Passcode Validation Utility\n"
-			        "Version %s.%s.%s (Build %s)\n"
-			        "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
-					"\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
+                       "ykvalidate - Yubikey OTP/Passcode Validation Utility\n"
+                    "Version %s.%s.%s (Build %s)\n"
+                    "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
+                    "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
 
-	return 0;
+    return 0;
 }
 
 static char *valid_options = "?u:c:V";
@@ -199,8 +199,8 @@ void parseCommandLine(int argc, char *argv[])
     /*
     **  Set this so we know whether to return 1 on invalid input because we
     **  use '?' for help and getopt uses '?' for telling us there was an
-	**  invalid option, so we can't use that to tell invalid input. Instead,
-	**  we check optopt and it will tell us.
+    **  invalid option, so we can't use that to tell invalid input. Instead,
+    **  we check optopt and it will tell us.
     */
     optopt = 0;
 
@@ -209,34 +209,34 @@ void parseCommandLine(int argc, char *argv[])
     {
         switch(ch)
         {
-			case 'u': /* Explicitly defined user */
-				user = strdup(optarg);
-				break;
+            case 'u': /* Explicitly defined user */
+                user = strdup(optarg);
+                break;
 
             case 'c': /* prompt for passcode */
                 mode |= MODE_PASSCODE;
                 break;
 
             case '?': /* show help and exit with 1 */
-				mode = MODE_USAGE;
-				break;
+                mode = MODE_USAGE;
+                break;
 
             case 'V': /* show version information */
-				mode = MODE_VERSION;
-				break;
-		}
-	}
-	
-	/* there should be at least one left over argument */
-	if (optind < argc)
-	{
-		/* an explicit declaration overrides this */
-		if (NULL == otp)
-		{
-			/* grab the first additional argument as the user name */
-			otp = strdup(argv[optind]);
-		}
-	}
+                mode = MODE_VERSION;
+                break;
+        }
+    }
+    
+    /* there should be at least one left over argument */
+    if (optind < argc)
+    {
+        /* an explicit declaration overrides this */
+        if (NULL == otp)
+        {
+            /* grab the first additional argument as the user name */
+            otp = strdup(argv[optind]);
+        }
+    }
 }
 
 /* courtesy myname.c (pam_unix) */
@@ -249,7 +249,7 @@ struct passwd *getPWEnt(void)
     if (cp && *cp && (pw = getpwnam(cp)) && pw->pw_uid == ruid)
         return pw;
 
-	return getpwuid(ruid);
+    return getpwuid(ruid);
 }
 
 char * getInput(const char *prompt, int size, int required, uint8_t flags)
@@ -317,130 +317,130 @@ char * getInput(const char *prompt, int size, int required, uint8_t flags)
 // this code is from Linux-PAM pam_unix support.c
 static int _yubi_run_helper_binary(const char *otp_passcode, const char *user)
 {
-    int					retval;
-	int					child;
-	int					fds[2];
-    void				(*sighandler)(int) = NULL;
+    int                    retval;
+    int                    child;
+    int                    fds[2];
+    void                (*sighandler)(int) = NULL;
 
     D(("called."));
 
     /* create a pipe for the password */
     if (pipe(fds) != 0)
-	{
-		D(("could not make pipe"));
-		return PAM_AUTH_ERR;
+    {
+        D(("could not make pipe"));
+        return PAM_AUTH_ERR;
     }
 
 #if 0
     // this code is from Linux-PAM pam_unix support.c
     if (off(UNIX_NOREAP, ctrl)) {
-	/*
-	 * This code arranges that the demise of the child does not cause
-	 * the application to receive a signal it is not expecting - which
-	 * may kill the application or worse.
-	 *
-	 * The "noreap" module argument is provided so that the admin can
-	 * override this behavior.
-	 */
-	sighandler = signal(SIGCHLD, SIG_DFL);
+    /*
+     * This code arranges that the demise of the child does not cause
+     * the application to receive a signal it is not expecting - which
+     * may kill the application or worse.
+     *
+     * The "noreap" module argument is provided so that the admin can
+     * override this behavior.
+     */
+    sighandler = signal(SIGCHLD, SIG_DFL);
     }
 #else
-	sighandler = signal(SIGCHLD, SIG_DFL);
+    sighandler = signal(SIGCHLD, SIG_DFL);
 #endif
 
     /* fork */
     child = fork();
     if (child == 0)
-	{
-        int				i = 0;
-        struct rlimit	rlim;
-		static char		*envp[] = { NULL };
-		char			*args[] = { NULL, NULL, NULL, NULL };
+    {
+        int                i = 0;
+        struct rlimit    rlim;
+        static char        *envp[] = { NULL };
+        char            *args[] = { NULL, NULL, NULL, NULL };
 
-		/* XXX - should really tidy up PAM here too */
-		
-		/* reopen stdin as pipe */
-		dup2(fds[0], STDIN_FILENO);
-	
-		if ( getrlimit(RLIMIT_NOFILE, &rlim)==0 )
-		{
+        /* XXX - should really tidy up PAM here too */
+        
+        /* reopen stdin as pipe */
+        dup2(fds[0], STDIN_FILENO);
+    
+        if ( getrlimit(RLIMIT_NOFILE, &rlim)==0 )
+        {
             if (rlim.rlim_max >= MAX_FD_NO)
                 rlim.rlim_max = MAX_FD_NO;
 
-			for (i=0; i<(int)rlim.rlim_max; i++)
-			{
-				if (i != STDIN_FILENO)
-					close(i);
-			}
-		}
-	
-		if (geteuid() == 0)
-		{
-			/* must set the real uid to 0 so the helper will not error */
-		    /* out if pam is called from setuid binary (su, sudo...)   */
-			setuid(0);
-		}
-	
-			/* exec binary helper */
-		args[0] = strdup(CHKPWD_HELPER);
-		args[1] = strdup(user);
-	
-		execve(CHKPWD_HELPER, args, envp);
-	
-		/* should not get here: exit with error */
-		D(("helper binary is not available"));
-		exit(PAM_AUTHINFO_UNAVAIL);
-    }
-	else if (child > 0)
-	{
-		/* wait for child */
-		/* if the stored password is NULL */
-        int				rc = 0;
-
-		if (otp_passcode != NULL) 	/* send the OTP/passcode to the child */
-		{
-		    if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 )
+            for (i=0; i<(int)rlim.rlim_max; i++)
             {
-		        D(("cannot send OTP/passcode to helper"));
+                if (i != STDIN_FILENO)
+                    close(i);
+            }
+        }
+    
+        if (geteuid() == 0)
+        {
+            /* must set the real uid to 0 so the helper will not error */
+            /* out if pam is called from setuid binary (su, sudo...)   */
+            setuid(0);
+        }
+    
+            /* exec binary helper */
+        args[0] = strdup(CHKPWD_HELPER);
+        args[1] = strdup(user);
+    
+        execve(CHKPWD_HELPER, args, envp);
+    
+        /* should not get here: exit with error */
+        D(("helper binary is not available"));
+        exit(PAM_AUTHINFO_UNAVAIL);
+    }
+    else if (child > 0)
+    {
+        /* wait for child */
+        /* if the stored password is NULL */
+        int                rc = 0;
+
+        if (otp_passcode != NULL)     /* send the OTP/passcode to the child */
+        {
+            if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 )
+            {
+                D(("cannot send OTP/passcode to helper"));
                 close(fds[1]);
                 retval = PAM_AUTH_ERR;
             }
-		}
-		else
-		{
-		    if ( write(fds[1], "", 1) == -1 )              /* blank OTP/passcode */
+        }
+        else
+        {
+            if ( write(fds[1], "", 1) == -1 )              /* blank OTP/passcode */
             {
-		        D(("cannot send OTP/passcode to helper"));
+                D(("cannot send OTP/passcode to helper"));
                 close(fds[1]);
                 retval = PAM_AUTH_ERR;
             }
-		}
+        }
 
-		close(fds[0]);       /* close here to avoid possible SIGPIPE above */
-		close(fds[1]);
+        close(fds[0]);       /* close here to avoid possible SIGPIPE above */
+        close(fds[1]);
 
-		rc = waitpid(child, &retval, 0);  /* wait for helper to complete */
+        rc = waitpid(child, &retval, 0);  /* wait for helper to complete */
 
-		if (rc < 0)
-		{
-			D(("yk_chkpwd waitpid returned %d: %m", rc));
-			retval = PAM_AUTH_ERR;
-		}
-		else
-		{
-			retval = WEXITSTATUS(retval);
-		}
+        if (rc < 0)
+        {
+            D(("yk_chkpwd waitpid returned %d: %m", rc));
+            retval = PAM_AUTH_ERR;
+        }
+        else
+        {
+            retval = WEXITSTATUS(retval);
+        }
     }
-	else
-	{
-		D(("fork failed"));
-		close(fds[0]);
-	 	close(fds[1]);
-		retval = PAM_AUTH_ERR;
+    else
+    {
+        D(("fork failed"));
+        close(fds[0]);
+         close(fds[1]);
+        retval = PAM_AUTH_ERR;
     }
 
     if (sighandler != SIG_ERR)
-	{
+    {
         (void) signal(SIGCHLD, sighandler);   /* restore old signal handler */
     }
 

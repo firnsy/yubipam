@@ -22,7 +22,7 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
 
 #include <getopt.h>
@@ -38,16 +38,16 @@
 
 #include "errno.h"
 
-char    *progname;
+char *progname;
 
-int     amroot;
+int  amroot;
 
-char    *otp;
-char    *user_text;
-char    *public_uid_text = NULL;
-char    *private_uid_text = NULL;
-char    *key_text = NULL;
-char    *passcode_text = NULL;
+char *otp;
+char *user_text;
+char *public_uid_text = NULL;
+char *private_uid_text = NULL;
+char *key_text = NULL;
+char *passcode_text = NULL;
 
 uint8_t public_uid_bin[PUBLIC_UID_BYTE_SIZE];
 uint8_t public_uid_bin_size = 0;
@@ -57,8 +57,8 @@ uint8_t private_uid_bin_size = 0;
 
 int mode;
 ykdb_entry entry;
-ykdb_h     *handle;
-yk_ticket  tkt;
+ykdb_h *handle;
+yk_ticket tkt;
 char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 
 extern int ykdb_errno;
@@ -75,11 +75,9 @@ int updateYubikeyEntry(void);
 int deleteYubikeyEntry(void);
 void cleanExit(int mode);
 
-int main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
     uint8_t             user_exists = 0;
     struct passwd       *pw;
-    
 
     /* save the program name */
     progname = argv[0];
@@ -96,13 +94,11 @@ int main (int argc, char *argv[])
     amroot = ( getuid() == 0 );
 
     /* if no user specified use calling user */
-    if (NULL == user_text)
-    {
+    if (NULL == user_text) {
         /* get passwd structure for current user */
         pw = getPWEnt();
 
-        if (NULL == pw)
-        {
+        if (NULL == pw) {
             fprintf(stderr, "Can't determine your user name\n");
             cleanExit(1);
         }
@@ -111,13 +107,10 @@ int main (int argc, char *argv[])
     }
 
     /* show usage when in USAGE mode or no user was provided */
-    if (mode == MODE_USAGE || NULL == user_text)
-    {
+    if (mode == MODE_USAGE || NULL == user_text) {
         showUsage(progname);
         cleanExit(1);
-    }
-    else if (mode == MODE_VERSION)
-    {
+    } else if (mode == MODE_VERSION) {
         showVersion();
     }
 
@@ -127,15 +120,13 @@ int main (int argc, char *argv[])
     /* get passwd structure for desired user */
     pw = getpwnam(user_text);
 
-    if (NULL == pw)
-    {
+    if (NULL == pw) {
         fprintf(stderr, "Unknown user: %s\n", user_text);
         cleanExit(1);
     }
 
     /* check if we have privelege to update users information */
-    if ( !amroot && pw->pw_uid != getuid() )
-    {
+    if ( !amroot && pw->pw_uid != getuid() ) {
         fprintf(stderr, "You may not view or modify yubikey information for %s\n", user_text);
         cleanExit(1);
     }
@@ -145,49 +136,39 @@ int main (int argc, char *argv[])
 
     /* open the db or create if empty */
     handle = ykdbDatabaseOpen(dbname);
-    if (handle == NULL)
-    {
+    if (handle == NULL) {
         handle = ykdbDatabaseCreate(dbname);
 
-        if (handle == NULL)
-        {
+        if (handle == NULL) {
             printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
             cleanExit(1);
         }
     }
 
-    if (mode == MODE_ADD)
-    {
+    if (mode == MODE_ADD) {
         /* require unique Public UID when adding an already existing user */
         if ( getPublicUID() != 0 )
             cleanExit(1);
 
-        if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) == YKDB_SUCCESS )
-        {
+        if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) == YKDB_SUCCESS ) {
             fprintf(stderr, "Entry for user \"%s\" and public UID already exist.\n", user_text);
             cleanExit(1);
         }
 
         if ( addYubikeyEntry() != 0 )
             cleanExit(1);
-    }
-    else if (mode == MODE_UPDATE)
-    {
+    } else if (mode == MODE_UPDATE) {
         /* can't update when one doesn't exist */
-        if (!user_exists)
-        {
+        if (!user_exists) {
             fprintf(stderr, "Entry for %s does not exist.\n", user_text);
             cleanExit(1);
         }
 
         if ( updateYubikeyEntry() != 0)
             cleanExit(1);
-    }
-    else if (mode == MODE_DELETE)
-    {
+    } else if (mode == MODE_DELETE) {
         /* can't delete when one doesn't exist */
-        if (!user_exists)
-        {
+        if (!user_exists) {
             fprintf(stderr, "Entry for %s does not exist.\n", user_text);
             cleanExit(1);
         }
@@ -195,10 +176,7 @@ int main (int argc, char *argv[])
         if ( deleteYubikeyEntry() != 0 )
             cleanExit(1);
     }
-
     /* sync to the yubikey */
-
-
 
     /* close the db */
     ykdbDatabaseClose(handle);
@@ -210,16 +188,15 @@ int main (int argc, char *argv[])
 }
 
 /*
-** cleanExit
-**
-** Description:
-**   Cleans up any memory that was allocated prior to exit.
-**
-** Arguments:
-**   int mode                   exit number
-*/
-void cleanExit(int mode)
-{
+ * cleanExit
+ *
+ * Description:
+ *   Cleans up any memory that was allocated prior to exit.
+ *
+ * Arguments:
+ *   int mode                   exit number
+ */
+void cleanExit(int mode) {
     /* free any and all allocated memory */
     free(otp);
     free(user_text);
@@ -231,19 +208,16 @@ void cleanExit(int mode)
     exit(mode);
 }
 
-
-
 /*
-** showUsage
-**
-** Description:
-**   Show program usage.
-**
-** Arguments:
-**   char *program_name         program name
-*/
-int showUsage(char *program_name)
-{
+ * showUsage
+ *
+ * Description:
+ *   Show program usage.
+ *
+ * Arguments:
+ *   char *program_name         program name
+ */
+int showUsage(char *program_name) {
     fprintf(stdout, "USAGE: %s [-options] USER\n", program_name);
     fprintf(stdout, "\n");
     fprintf(stdout, "Options:\n");
@@ -281,18 +255,18 @@ int showUsage(char *program_name)
 }
 
 /*
-** showUsage
-**
-** Description:
-**   Show program version.
-*/
-int showVersion(void)
-{
+ * showUsage
+ *
+ * Description:
+ *   Show program version.
+ */
+int showVersion(void) {
     fprintf(stderr, "\n"
-                    "ykpasswd - Yubikey OTP/Passcode Utility\n"
-                    "Version %s.%s.%s (Build %s)\n"
-                    "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
-                    "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
+        "ykpasswd - Yubikey OTP/Passcode Utility\n"
+        "Version %s.%s.%s (Build %s)\n"
+        "Originally written by the SecurixLive team,\n"
+        "Maintained on http://sourceforge.net/projects/pam-yubikey\n"
+        "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
 
     return 0;
 }
@@ -303,26 +277,25 @@ static char *valid_options = "?adcf:k:o:p:u:F:P:sVD:";
 #define LONGOPT_ARG_REQUIRED 1
 #define LONGOPT_ARG_OPTIONAL 2
 static struct option long_options[] = {
-   {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
-   {"tab1", LONGOPT_ARG_NONE, NULL, TF_TAB_1},
-   {"tab2", LONGOPT_ARG_NONE, NULL, TF_TAB_2},
-   {"tab3", LONGOPT_ARG_NONE, NULL, TF_TAB_3},
-   {"delay1", LONGOPT_ARG_NONE, NULL, TF_DELAY_1},
-   {"delay2", LONGOPT_ARG_NONE, NULL, TF_DELAY_2},
-   {"cr", LONGOPT_ARG_NONE, NULL, TF_CR},
-   {"sendref", LONGOPT_ARG_NONE, NULL, CF_SEND_REF},
-   {"ticketfirst", LONGOPT_ARG_NONE, NULL, CF_TICKET_FIRST},
-   {"pacing10", LONGOPT_ARG_NONE, NULL, CF_PACING_10},
-   {"pacing20", LONGOPT_ARG_NONE, NULL, CF_PACING_20},
-   {"static", LONGOPT_ARG_NONE, NULL, CF_STATIC},
-   {"user", LONGOPT_ARG_REQUIRED, NULL, OPT_USER},
-   {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-   {"help", LONGOPT_ARG_NONE, NULL, '?'},
-   {0, 0, 0, 0}
+    {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
+    {"tab1", LONGOPT_ARG_NONE, NULL, TF_TAB_1},
+    {"tab2", LONGOPT_ARG_NONE, NULL, TF_TAB_2},
+    {"tab3", LONGOPT_ARG_NONE, NULL, TF_TAB_3},
+    {"delay1", LONGOPT_ARG_NONE, NULL, TF_DELAY_1},
+    {"delay2", LONGOPT_ARG_NONE, NULL, TF_DELAY_2},
+    {"cr", LONGOPT_ARG_NONE, NULL, TF_CR},
+    {"sendref", LONGOPT_ARG_NONE, NULL, CF_SEND_REF},
+    {"ticketfirst", LONGOPT_ARG_NONE, NULL, CF_TICKET_FIRST},
+    {"pacing10", LONGOPT_ARG_NONE, NULL, CF_PACING_10},
+    {"pacing20", LONGOPT_ARG_NONE, NULL, CF_PACING_20},
+    {"static", LONGOPT_ARG_NONE, NULL, CF_STATIC},
+    {"user", LONGOPT_ARG_REQUIRED, NULL, OPT_USER},
+    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
+    {"help", LONGOPT_ARG_NONE, NULL, '?'},
+    {0, 0, 0, 0}
 };
 
-void parseCommandLine(int argc, char *argv[])
-{
+void parseCommandLine(int argc, char *argv[]) {
     int ch;                         /* storage var for getopt info */
     int option_index = -1;
 
@@ -403,8 +376,7 @@ void parseCommandLine(int argc, char *argv[])
     }
 }
 
-int getPublicUID(void)
-{
+int getPublicUID(void) {
     if (NULL != otp)
         parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, NULL);
         

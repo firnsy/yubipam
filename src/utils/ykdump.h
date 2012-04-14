@@ -26,11 +26,11 @@
 
 #include "ykversion.h"
 
-#define MODE_VERSION		1
-#define MODE_USAGE			2
-#define MODE_SEARCH_USER  	8
-#define MODE_SEARCH_PUBLIC	16
-#define MODE_SEARCH_INDEX 	32
-#define MODE_DUMP_ALL       128
+#define MODE_VERSION 1
+#define MODE_USAGE 2
+#define MODE_SEARCH_USER 8
+#define MODE_SEARCH_PUBLIC 16
+#define MODE_SEARCH_INDEX 32
+#define MODE_DUMP_ALL 128
 
 #endif /* __YK_DUMP_H__*/ 

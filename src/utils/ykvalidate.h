@@ -26,12 +26,12 @@
 
 #include "ykversion.h"
 
-#define MODE_VERSION		1
-#define MODE_USAGE			2
-#define MODE_VALIDATE		4
-#define MODE_PASSCODE       8
+#define MODE_VERSION 1
+#define MODE_USAGE 2
+#define MODE_VALIDATE 4
+#define MODE_PASSCODE 8
 
-#define GETLINE_FLAGS_DEFAULT    0
-#define GETLINE_FLAGS_ECHO_OFF   1
+#define GETLINE_FLAGS_DEFAULT 0
+#define GETLINE_FLAGS_ECHO_OFF 1
 
 #endif /* __YK_VALIDATE_H__*/ 

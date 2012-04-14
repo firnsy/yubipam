@@ -38,13 +38,13 @@
 
 char *progname;
 
-int	amroot;
+int    amroot;
 
-uint8_t	public_uid_bin[PUBLIC_UID_BYTE_SIZE];
-uint8_t	public_uid_bin_size = 0;
+uint8_t    public_uid_bin[PUBLIC_UID_BYTE_SIZE];
+uint8_t    public_uid_bin_size = 0;
 uint32_t entry_idx;
 
-int	mode;
+int    mode;
 ykdb_entry entry;
 ykdb_h *handle;
 yk_ticket tkt;
@@ -62,43 +62,43 @@ void cleanExit(int mode);
 
 int main (int argc, char *argv[])
 {
-	int					ret;
-	int entry_count;
+    int                    ret;
+    int entry_count;
 
-	/* save the program name */
-	progname = argv[0];
+    /* save the program name */
+    progname = argv[0];
 
-	/* set default values for the entry */
-	entry.flags = YKDB_TOKEN_ENC_PUBLIC_UID;
-	entry.ticket.last_session = 0x0000;
-	entry.ticket.last_timestamp_lo = 0x0000;
-	entry.ticket.last_timestamp_hi = 0x00;
-	entry.ticket.last_button = 0x00;
-	
-	amroot = ( getuid() == 0 );
+    /* set default values for the entry */
+    entry.flags = YKDB_TOKEN_ENC_PUBLIC_UID;
+    entry.ticket.last_session = 0x0000;
+    entry.ticket.last_timestamp_lo = 0x0000;
+    entry.ticket.last_timestamp_hi = 0x00;
+    entry.ticket.last_button = 0x00;
+    
+    amroot = ( getuid() == 0 );
 
-	parseCommandLine(argc, argv);
+    parseCommandLine(argc, argv);
 
     /* open the DB if we are actually searching */
     if ( mode & (MODE_SEARCH_USER | MODE_SEARCH_PUBLIC | MODE_SEARCH_INDEX | MODE_DUMP_ALL) )
     {
         /* check if we have privelege to update users information */
-    	if ( !amroot )
-    	{
-    		fprintf(stderr, "You need root provileges to dump the yubikey database.\n");
-    		cleanExit(1);
-    	}
+        if ( !amroot )
+        {
+            fprintf(stderr, "You need root provileges to dump the yubikey database.\n");
+            cleanExit(1);
+        }
     
         /* Get perms */
         setregid( getegid(), -1 );
 
-    	/* open the db or create if empty */
+        /* open the db or create if empty */
         handle = ykdbDatabaseOpenReadOnly(dbname);
         if (handle == NULL)
-    	{
-    		printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
-    		cleanExit(1);
-    	}
+        {
+            printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
+            cleanExit(1);
+        }
     }
 
     entry_count = ykdbDatabaseEntryCountGet(handle);
@@ -114,10 +114,10 @@ int main (int argc, char *argv[])
         fprintf(stdout, "Searching on index.\n");
 
         if ( ykdbEntrySeekOnIndex(handle, entry_idx) == YKDB_SUCCESS )
-    	    if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
             {
                 fprintf(stdout, "Index: %d\n", entry_idx);
-	            ykdbPrintEntry(&entry);
+                ykdbPrintEntry(&entry);
             }
     }
     else if ( (mode & MODE_SEARCH_USER) && (mode & MODE_SEARCH_PUBLIC) )
@@ -132,11 +132,11 @@ int main (int argc, char *argv[])
                                               )) == YKDB_SUCCESS )
         {
             
-	        if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
             {
                 ykdbEntryGetIndex(handle, &entry_idx);
                 fprintf(stdout, "Index: %d\n", entry_idx);
-	            ykdbPrintEntry(&entry);
+                ykdbPrintEntry(&entry);
             }
             else
                 fprintf(stderr, "Unable to read entry. Skipping.\n");
@@ -152,11 +152,11 @@ int main (int argc, char *argv[])
         while ( (ret=ykdbEntrySeekOnUserHash(handle, (uint8_t *)&entry.user_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS)
         {
             
-	        if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
             {
                 ykdbEntryGetIndex(handle, &entry_idx);
                 fprintf(stdout, "Index: %d\n", entry_idx);
-	            ykdbPrintEntry(&entry);
+                ykdbPrintEntry(&entry);
             }
             else
                 fprintf(stderr, "Unable to read entry. Skipping.\n");
@@ -171,11 +171,11 @@ int main (int argc, char *argv[])
         
         while ( (ret=ykdbEntrySeekOnPublicHash(handle, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS)
         {
-	        if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
             {
                 ykdbEntryGetIndex(handle, &entry_idx);
                 fprintf(stdout, "Index: %d\n", entry_idx);
-	            ykdbPrintEntry(&entry);
+                ykdbPrintEntry(&entry);
             }
             else
                 fprintf(stderr, "Unable to read entry. Skipping.\n");
@@ -183,7 +183,7 @@ int main (int argc, char *argv[])
             if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
                 break;
         }
-	}
+    }
     else if (mode == MODE_DUMP_ALL)
     {
         fprintf(stdout, "Dumping all entries.\n");
@@ -193,10 +193,10 @@ int main (int argc, char *argv[])
 
         while ( ret == YKDB_SUCCESS )
         {
-	        if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
             {
                 fprintf(stdout, "Index: %d\n", index);
-	            ykdbPrintEntry(&entry);
+                ykdbPrintEntry(&entry);
                 fprintf(stdout, "\n");
             }
             else
@@ -206,21 +206,21 @@ int main (int argc, char *argv[])
             ret = ykdbEntryNext(handle);
         }
     }
-	else if (mode == MODE_VERSION)
-	{
-		showVersion();
-	}
-	else
-	{
-		showUsage(progname);
-		cleanExit(1);
+    else if (mode == MODE_VERSION)
+    {
+        showVersion();
+    }
+    else
+    {
+        showUsage(progname);
+        cleanExit(1);
     }
 
-	/* close the db */
-	ykdbDatabaseClose(handle);
+    /* close the db */
+    ykdbDatabaseClose(handle);
 
-	cleanExit(0);
-	return 0;
+    cleanExit(0);
+    return 0;
 }
 
 /*
@@ -230,14 +230,14 @@ int main (int argc, char *argv[])
 **   Cleans up any memory that was allocated prior to exit.
 **
 ** Arguments:
-**   int mode					exit number
+**   int mode                    exit number
 */
 void cleanExit(int mode)
 {
-	/* free any and all allocated memory */
+    /* free any and all allocated memory */
 
-	/* exit as required */
-	exit(mode);
+    /* exit as required */
+    exit(mode);
 }
 
 
@@ -249,21 +249,21 @@ void cleanExit(int mode)
 **   Show program usage.
 **
 ** Arguments:
-**   char *program_name			program name
+**   char *program_name            program name
 */
 int showUsage(char *program_name)
 {
     fprintf(stdout, "USAGE: %s [-options] [-u <user>] [-f <uid>]\n", program_name);
-	fprintf(stdout, "\n");
-	fprintf(stdout, "Options:\n");
+    fprintf(stdout, "\n");
+    fprintf(stdout, "Options:\n");
     fprintf(stdout, "   -D <path>   Explicitly define the database <path>\n");
     fprintf(stdout, "   -d          Dump entire database\n");
     fprintf(stdout, "   -u <user>   Search based on <user>\n");
     fprintf(stdout, "   -f <uid>    Search based on public <uid>\n");
     fprintf(stdout, "   -i <index>  Search based on <index> value\n");
-	fprintf(stdout, "   -?          Show this information\n");
+    fprintf(stdout, "   -?          Show this information\n");
     fprintf(stdout, "   -V          Show version and exit\n");
-	fprintf(stdout, "\n");
+    fprintf(stdout, "\n");
     fprintf(stdout, "Longname options and their corresponding single char version\n");
     fprintf(stdout, "   --database <path>  Same as -u\n");
     fprintf(stdout, "   --dumpall          Same as -d\n");
@@ -272,9 +272,9 @@ int showUsage(char *program_name)
     fprintf(stdout, "   --index <index>    Same as -i\n");
     fprintf(stdout, "   --help             Same as -?\n");
     fprintf(stdout, "   --version          Same as -V\n");
-	fprintf(stdout, "\n");
-	 
-	return 0;
+    fprintf(stdout, "\n");
+     
+    return 0;
 }
 
 /*
@@ -286,12 +286,12 @@ int showUsage(char *program_name)
 int showVersion(void)
 {
     fprintf(stderr, "\n"
-   					"ykdump - Yubikey Database Dumping Utility\n"
-			        "Version %s.%s.%s (Build %s)\n"
-			        "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
-					"\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
+                       "ykdump - Yubikey Database Dumping Utility\n"
+                    "Version %s.%s.%s (Build %s)\n"
+                    "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
+                    "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
 
-	return 0;
+    return 0;
 }
 
 static char *valid_options = "?u:f:i:VD:d";
@@ -322,8 +322,8 @@ void parseCommandLine(int argc, char *argv[])
     /*
     **  Set this so we know whether to return 1 on invalid input because we
     **  use '?' for help and getopt uses '?' for telling us there was an
-	**  invalid option, so we can't use that to tell invalid input. Instead,
-	**  we check optopt and it will tell us.
+    **  invalid option, so we can't use that to tell invalid input. Instead,
+    **  we check optopt and it will tell us.
     */
     optopt = 0;
 
@@ -337,41 +337,41 @@ void parseCommandLine(int argc, char *argv[])
                 break;
 
             case 'd': /* show version information */
-				mode = MODE_DUMP_ALL;
-				break;
+                mode = MODE_DUMP_ALL;
+                break;
 
             case 'i':
                 entry_idx = atoi(optarg);
                 mode |= MODE_SEARCH_INDEX;
                 break;
 
-			case 'u': /* Explicitly defined user */
-	            /* set additional default values for the entry after parsing */
-            	getSHA256((const uint8_t *)optarg, strlen(optarg), (uint8_t *)&entry.user_hash);
+            case 'u': /* Explicitly defined user */
+                /* set additional default values for the entry after parsing */
+                getSHA256((const uint8_t *)optarg, strlen(optarg), (uint8_t *)&entry.user_hash);
 
                 mode |= MODE_SEARCH_USER;
-				break;
+                break;
 
             case '?': /* show help and exit with 1 */
-				mode = MODE_USAGE;
-				break;
+                mode = MODE_USAGE;
+                break;
 
             case 'V': /* show version information */
-				mode = MODE_VERSION;
-				break;
+                mode = MODE_VERSION;
+                break;
 
-			case 'f': /* Public UID */
-		        if ( !checkHexString((const uint8_t *)optarg) )
+            case 'f': /* Public UID */
+                if ( !checkHexString((const uint8_t *)optarg) )
                 {
-    			    public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
-	                getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
+                    public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
+                    getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
 
                 }
-		        else if ( !checkModHexString((const uint8_t *)optarg) )
+                else if ( !checkModHexString((const uint8_t *)optarg) )
                 {
-    			    public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
-    	            getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
+                    public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
+                    getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
                 }
                 else
@@ -379,13 +379,13 @@ void parseCommandLine(int argc, char *argv[])
                     fprintf(stderr, "Ignoring unknown public UID format.\n");
                 }
 
-				break;
-		}	
-	}
-	
-	/* there may be some left over arguments */
-	if (optind < argc)
-	{
-	}
+                break;
+        }    
+    }
+    
+    /* there may be some left over arguments */
+    if (optind < argc)
+    {
+    }
 }
 
