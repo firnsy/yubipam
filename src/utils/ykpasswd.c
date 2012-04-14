@@ -64,8 +64,6 @@ char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 extern int ykdb_errno;
 extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
-char *getInput(const char *, int, int, uint8_t);
-struct passwd *getPWEnt(void);
 int showUsage(char *progam_name);
 int showVersion(void);
 void parseCommandLine(int argc, char *argv[]);
@@ -667,63 +665,5 @@ int deleteYubikeyEntry(void)
     }
 
     return 0;
-}
-
-char * getInput(const char *prompt, int size, int required, uint8_t flags)
-{
-    int bytes_read = 0;
-    char *answer;
-    size_t gl_size = size;
-
-    struct termios old, new;
-                               
-    /* get terminal attributes and fail if we can't */
-    if ( tcgetattr(fileno(stdin), &old) != 0 )
-        return NULL;
-        
-    new = old;
-
-    /*turn echoing off and fail if we can't. */
-    if ( flags & GETLINE_FLAGS_ECHO_OFF )
-        new.c_lflag &= ~ECHO;
-
-    if ( tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0 )
-        return NULL;
-
-    while ( (bytes_read-1) != required )
-    {
-        fprintf(stdout, "%s", prompt);
-        answer = malloc(size + 1);
-        bytes_read = getline(&answer, &gl_size, stdin);
-
-        if ( (required <= 0) || (NULL == answer) )
-            break;
-    }
-
-    if ( NULL != answer )
-    {
-        if (bytes_read >= size)
-            answer[size] = '\0';
-        else
-            answer[bytes_read-1] = '\0';
-    }
-
-    /* restore terminal */
-    (void) tcsetattr(fileno(stdin), TCSAFLUSH, &old);
-
-    return answer;
-}
-
-/* courtesy myname.c (pam_unix) */
-struct passwd *getPWEnt(void)
-{
-    struct passwd       *pw;
-    const char          *cp = getlogin();
-    uid_t               ruid = getuid();
-
-    if (cp && *cp && (pw = getpwnam(cp)) && pw->pw_uid == ruid)
-        return pw;
-
-    return getpwuid(ruid);
 }
 

@@ -35,10 +35,22 @@
 
 // reference: http://csrc.nist.gov/encryption/shs/dfips-180-2.pdf
 
+#ifdef HAVE_CONFIG_H
+    #include "config.h"
+#endif
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h> //printf
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
+#include <pwd.h>
+#include <syslog.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "yubikey_common.h"
 #include "yubikey_util.h"
@@ -1023,5 +1035,173 @@ int safeStrnlen(const char *buf, int buf_size) {
         return -1;
      
     return i;
+}
+
+int _getline(char *buf, size_t buf_size) {
+    int i;
+    int c = 0;
+
+    for (i = 0; i < buf_size -1 && (c = getc(stdin)) != EOF && c != '\n'; ++i)
+        buf[i]= c;
+
+    if (c == '\n') {
+        buf[i] = c;
+        i++;
+    }
+    buf[i] = '\0';
+
+    return i;
+}
+
+char *getInput(const char *prompt, int size, int required, uint8_t flags) {
+    int bytes_read = 0;
+    char *answer = NULL;
+    size_t gl_size = size;
+
+    struct termios old, new;
+                               
+    /* get terminal attributes and fail if we can't */
+    if ( tcgetattr(fileno(stdin), &old) != 0 )
+        return NULL;
+        
+    new = old;
+
+    /*turn echoing off and fail if we can't. */
+    if ( flags & GETLINE_FLAGS_ECHO_OFF )
+        new.c_lflag &= ~ECHO;
+
+    if ( tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0 )
+        return NULL;
+
+    while ( (bytes_read-1) != required ) {
+        fprintf(stdout, "%s", prompt);
+        answer = malloc(size + 1);
+        bytes_read = _getline(answer, gl_size);
+
+        if ( (required <= 0) || (NULL == answer) )
+            break;
+    }
+
+    if ( NULL != answer ) {
+        if (bytes_read >= size)
+            answer[size] = '\0';
+        else
+            answer[bytes_read-1] = '\0';
+    }
+
+    /* restore terminal */
+    (void) tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+
+    return answer;
+}
+
+struct passwd *getPWEnt(void) {
+    struct passwd *pw;
+    const char *cp = getlogin();
+    uid_t ruid = getuid();
+
+    if (cp && *cp && (pw = getpwnam(cp)) && pw->pw_uid == ruid)
+        return pw;
+
+    return getpwuid(ruid);
+}
+
+// verify the OTP/passcode of a user
+int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
+    int retval;
+    int child;
+    int fds[2];
+    void (*sighandler)(int) = NULL;
+
+    D((LOG_DEBUG, "called."));
+
+    // create a pipe for the OTP/passcode
+    if (pipe(fds) != 0) {
+        D((LOG_DEBUG, "could not make pipe"));
+        return -1;
+    }
+
+    sighandler = signal(SIGCHLD, SIG_DFL);
+
+    // fork
+    child = fork();
+    if (child == 0) {
+        int i = 0;
+        struct rlimit rlim;
+        static char *envp[] = { NULL };
+        char *args[] = { NULL, NULL, NULL, NULL };
+
+        /* reopen stdin as pipe */
+        dup2(fds[0], STDIN_FILENO);
+       
+        if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+            if (rlim.rlim_max >= MAX_FD_NO)
+                rlim.rlim_max = MAX_FD_NO;
+
+            for (i=0; i<(int)rlim.rlim_max; i++) {
+                if (i != STDIN_FILENO)
+                    close(i);
+            }
+        }
+       
+        if (geteuid() == 0) {
+            /* must set the real uid to 0 so the helper will not error
+             * out if pam is called from setuid binary (su, sudo...) */
+            setuid(0);
+        }
+       
+        /* exec binary helper */
+        args[0] = strdup(CHKPWD_HELPER);
+        args[1] = strdup(user);
+       
+        execve(CHKPWD_HELPER, args, envp);
+       
+        /* should not get here: exit with error */
+        syslog(LOG_ERR, "helper binary is not available");
+        exit(EXIT_FAILURE);
+    } else if (child > 0) {
+        /* wait for child
+         * if the stored OTP/passcode is NULL */
+        int rc = 0;
+
+        if (otp_passcode != NULL) { /* send the OTP/passcode to the child */
+            if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 ) {
+                D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
+                close(fds[1]);
+                retval = -1;
+            }
+            otp_passcode = NULL;
+        } else {
+            if ( write(fds[1], "", 1) == -1 ) { /* blank OTP/passcode */
+                D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
+                close(fds[1]);
+                retval = -1;
+            }
+        }
+
+        close(fds[0]); /* close here to avoid possible SIGPIPE above */
+        close(fds[1]);
+
+        rc = waitpid(child, &retval, 0); /* wait for helper to complete */
+
+        if (rc < 0) {
+            syslog(LOG_ERR, "%s: yk_chkpwd waitpid returned %d: %m", __FUNCTION__, rc);
+            retval = -1;
+        } else {
+            retval = WEXITSTATUS(retval);
+        }
+    } else {
+        D((LOG_DEBUG, "fork failed"));
+        close(fds[0]);
+        close(fds[1]);
+        retval = -1;
+    }
+
+    if (sighandler != SIG_ERR) {
+        (void) signal(SIGCHLD, sighandler); /* restore old signal handler */
+    }
+
+    D((LOG_DEBUG, "returning %d", retval));
+    return retval;
 }
 

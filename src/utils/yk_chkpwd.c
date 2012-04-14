@@ -38,8 +38,13 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
+
+#ifndef __linux__
+    #include <security/pam_appl.h>
+#endif
+#include <security/pam_modules.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -63,50 +68,24 @@ static int selinux_enabled=-1;
 #define SELINUX_ENABLED 0
 #endif
 
-#define MAXPASS        129    /* the maximum length of a OTP/passcode */
-
-#include <security/_pam_types.h>
+#define MAXPASS 129 /* the maximum length of a OTP/passcode */
 
 int _yubi_verify_otp_passcode(char *, char *);
 
-/* syslogging function for errors and other information */
-#if defined(DEBUG)
-#define DEBUG_PRINT 1
-#else
-#define DEBUG_PRINT 0
-#endif
-
-#define D(fmt, ...) \
-    do { if (DEBUG_PRINT) _log_err(LOG_NOTICE, fmt, __VA_ARGS__); } while (0)
-
-static void _log_err(int err, const char *format,...)
-{
-    va_list                args;
-
-    va_start(args, format);
-    openlog("yk_chkpwd", LOG_CONS | LOG_PID, LOG_AUTHPRIV);
-    vsyslog(err, format, args);
-    va_end(args);
-    closelog();
-}
-
-static void su_sighandler(int sig)
-{
+static void su_sighandler(int sig) {
 #ifndef SA_RESETHAND
     /* emulate the behaviour of the SA_RESETHAND flag */
     if ( sig == SIGILL || sig == SIGTRAP || sig == SIGBUS || sig = SIGSERV )
         signal(sig, SIG_DFL);
 #endif
-    if (sig > 0)
-    {
-        _log_err(LOG_NOTICE, "caught signal %d.", sig);
+    if (sig > 0) {
+        syslog(LOG_NOTICE, "caught signal %d.", sig);
         exit(sig);
     }
 }
 
-static void setup_signals(void)
-{
-    struct sigaction    action;    /* posix signal structure */
+static void setup_signals(void) {
+    struct sigaction action;    /* posix signal structure */
 
     /*
      * Setup signal handlers
@@ -129,10 +108,9 @@ static void setup_signals(void)
 }
 
 
-static char *getuidname(uid_t uid)
-{
-    struct passwd        *pw;
-    static char            username[32];
+static char *getuidname(uid_t uid) {
+    struct passwd *pw;
+    static char username[32];
 
     pw = getpwuid(uid);
     if (pw == NULL)
@@ -145,13 +123,12 @@ static char *getuidname(uid_t uid)
 }
 
 
-int main(int argc, char *argv[])
-{
-    char                pass[MAXPASS + 1];
-    int                    npass;
-    int                    force_failure = 0;
-    int                    retval = PAM_AUTH_ERR;
-    char                *user;
+int main(int argc, char *argv[]) {
+    char pass[MAXPASS + 1];
+    int npass;
+    int force_failure = 0;
+    int retval = PAM_AUTH_ERR;
+    char *user;
 
     /*
      * Catch or ignore as many signal as possible.
@@ -167,9 +144,8 @@ int main(int argc, char *argv[])
      * account).
      */
 
-    if (isatty(STDIN_FILENO) || argc != 2 )
-    {
-        _log_err(LOG_NOTICE
+    if (isatty(STDIN_FILENO) || argc != 2 ) {
+        syslog(LOG_NOTICE
               ,"inappropriate use of Unix helper binary [UID=%d]"
              ,getuid());
         fprintf(stderr
@@ -185,18 +161,14 @@ int main(int argc, char *argv[])
      * existing check prevents shadow password authentication from working.
      * We must thus skip the check if the real uid is 0.
      */
-    if (getuid() == 0)
-    {
+    if (getuid() == 0) {
         user=argv[1];
-    }
-    else
-    {
+    } else {
         user = getuidname(getuid());
         /* if the caller specifies the username, verify that user
          matches it */
-        if (strcmp(user, argv[1]))
-        {
-            _log_err(LOG_NOTICE
+        if (strcmp(user, argv[1])) {
+            syslog(LOG_NOTICE
               ,"mismatch of %s|%s", user, argv[1]);
             return PAM_AUTH_ERR;
         }
@@ -205,16 +177,11 @@ int main(int argc, char *argv[])
     /* read the OTP/passcode from stdin (a pipe from the pam_yubikey module) */
     npass = read(STDIN_FILENO, pass, MAXPASS);
 
-    if (npass < 0)        /* is it a valid OTP/passcode? */
-    {
-        _log_err(LOG_DEBUG, "no OTP/passcode supplied");
-    }
-    else if (npass >= MAXPASS)
-    {
-        _log_err(LOG_DEBUG, "OTP/passcode too long");
-    }
-    else
-    {
+    if (npass < 0) {       /* is it a valid OTP/passcode? */
+        syslog(LOG_DEBUG, "no OTP/passcode supplied");
+    } else if (npass >= MAXPASS) {
+        syslog(LOG_DEBUG, "OTP/passcode too long");
+    } else {
         pass[npass] = '\0';    /* NUL terminate */
         retval = _yubi_verify_otp_passcode(user, pass);
     }
@@ -222,49 +189,46 @@ int main(int argc, char *argv[])
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
 
     /* return pass or fail */
-    if ((retval != PAM_SUCCESS) || force_failure)
-    {
-        _log_err(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
+    if ((retval != PAM_SUCCESS) || force_failure) {
+        syslog(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
         return PAM_AUTH_ERR;
     }
     
     return retval;
 }
 
-int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
-{
-    int    i;
+int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
+    int i;
 
-    yk_ticket           tkt;
-    ykdb_entry          entry;
-    ykdb_h              *handle;
+    yk_ticket tkt;
+    ykdb_entry entry;
+    ykdb_h *handle;
     
-    char                *pch;
-    char                otp[64] = "";    // max 12-char public-id, 32-char otp
-    char                passcode[64] = "";
+    char *pch;
+    char otp[64] = "";    // max 12-char public-id, 32-char otp
+    char passcode[64] = "";
 
-    uint8_t             tkt_private_uid_hash[32];
+    uint8_t tkt_private_uid_hash[32];
 
-    uint8_t             ticket_enc_key[256];
-    uint8_t             ticket_enc_hash[32];
+    uint8_t ticket_enc_key[256];
+    uint8_t ticket_enc_hash[32];
 
-    uint8_t             public_uid_bin[PUBLIC_UID_BYTE_SIZE];
-    uint8_t             public_uid_bin_size = 0;
+    uint8_t public_uid_bin[PUBLIC_UID_BYTE_SIZE];
+    uint8_t public_uid_bin_size = 0;
 
-    uint32_t            crc;
-    int                    delta_session;
-    int                    delta_button;
-    int                 otp_len = 0;
-    int                 passcode_len = 0;
+    uint32_t crc;
+    int delta_session;
+    int delta_button;
+    int otp_len = 0;
+    int passcode_len = 0;
 
-    D("received OTP/Passcode: %s", otp_passcode ? otp_passcode:"");
+    D((LOG_DEBUG, "received OTP/Passcode: %s", otp_passcode ? otp_passcode:""));
 
     /* set additional default values for the entry after parsing */
     getSHA256((uint8_t *)user, strlen(user), (uint8_t *)&entry.user_hash);
     
     /* everything upto the first "|" is otp, everything after is passcode */
-    if ( NULL != (pch=strchr(otp_passcode, '|')) )
-    {
+    if ( NULL != (pch=strchr(otp_passcode, '|')) ) {
         otp_len = pch-otp_passcode;
         passcode_len = strlen(otp_passcode) - otp_len - 1;
 
@@ -273,22 +237,19 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
 
         if ( passcode_len > 0 )
             strncpy(passcode, pch+1, passcode_len);
-    }
-    else
-    {
-        _log_err(LOG_NOTICE, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
+    } else {
+        syslog(LOG_NOTICE, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
         return PAM_CRED_INSUFFICIENT;
     }
     
-    D("OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len);
+    D((LOG_DEBUG, "OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len));
 
     /* perform initial parse to grab public UID */
     parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, NULL);
      
     /* OTP needs the public UID for lookup */
-    if (public_uid_bin_size <= 0)
-    {
-        D("public_uid has no length, OTP is invalid", "");
+    if (public_uid_bin_size <= 0) {
+        D((LOG_DEBUG, "public_uid has no length, OTP is invalid", ""));
         return PAM_CRED_INSUFFICIENT;
     }
 
@@ -297,23 +258,20 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
      
     /* open the db or create if empty */
     handle = ykdbDatabaseOpen(CONFIG_AUTH_DB_DEFAULT);
-    if (handle == NULL)
-    {
-        D("couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT);
+    if (handle == NULL) {
+        D((LOG_DEBUG, "couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT));
         return PAM_AUTHINFO_UNAVAIL;
     }
     
     /* seek to public UID if it exists */
-    if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS )
-    {
+    if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
-        D("no entry for user (with that token): %s", user);
+        D((LOG_DEBUG, "no entry for user (with that token): %s", user));
         return PAM_USER_UNKNOWN;
     }
 
     /* grab the entry */
-    if ( ykdbEntryGet(handle, &entry) != YKDB_SUCCESS )
-    {
+    if ( ykdbEntryGet(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
 
         return PAM_AUTHINFO_UNAVAIL;
@@ -323,29 +281,26 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
     safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
      
     /* add hex string format of public uid */
-    if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID )
-    {
+    if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID ) {
         safeSnprintfAppend((char *)ticket_enc_key, 256, "|");
         for(i=0; i<public_uid_bin_size; i++)
             safeSnprintfAppend((char *)ticket_enc_key, 256, "%02x", public_uid_bin[i]);
     }
     
     /* add passcode as appropriate */
-    if ( (entry.flags & YKDB_TOKEN_ENC_PASSCODE) || passcode_len > 0 )
-    {
+    if ( (entry.flags & YKDB_TOKEN_ENC_PASSCODE) || passcode_len > 0 ) {
         safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode);
     }
 
     /* close off decryption key text and generate encryption hash */
     safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
-    D("Encryption Key: %s", ticket_enc_key);
+    D((LOG_DEBUG, "Encryption Key: %s", ticket_enc_key));
 
     getSHA256(ticket_enc_key, strlen((char *)ticket_enc_key), ticket_enc_hash);
     
     /* decrypt if flags indicate so */
     if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID ||
-         entry.flags & YKDB_TOKEN_ENC_PASSCODE )
-    {
+            entry.flags & YKDB_TOKEN_ENC_PASSCODE ) {
         aesDecryptCBC((uint8_t *)&entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_hash, ticket_enc_hash+16);
     }
  
@@ -357,10 +312,9 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
     ENDIAN_SWAP_16(crc);
  
     /* no use continuing if the decoded OTP failed */
-    if ( crc != CRC_OK_RESIDUE )
-    {
+    if ( crc != CRC_OK_RESIDUE ) {
         ykdbDatabaseClose(handle);
-        D("crc invalid: 0x%04x", crc);
+        D((LOG_DEBUG, "crc invalid: 0x%04x", crc));
 
         return PAM_AUTH_ERR;
     }
@@ -369,10 +323,9 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
     getSHA256(tkt.private_uid, PRIVATE_UID_BYTE_SIZE, (uint8_t *)&tkt_private_uid_hash);
  
     /* match private uid hashes */
-    if ( memcmp(&tkt_private_uid_hash, &entry.ticket.private_uid_hash, 32) )
-    {
+    if ( memcmp(&tkt_private_uid_hash, &entry.ticket.private_uid_hash, 32) ) {
         ykdbDatabaseClose(handle);
-        D("private uid mismatch", "");
+        D((LOG_DEBUG, "private uid mismatch", ""));
         return PAM_AUTH_ERR;
     }
 
@@ -380,17 +333,15 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
     delta_session = tkt.session_counter - entry.ticket.last_session;
     delta_button = tkt.button_counter - entry.ticket.last_button;
 
-    if ( delta_session < 0 )
-    {
+    if ( delta_session < 0 ) {
         ykdbDatabaseClose(handle);
-        D("OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session);
+        D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session));
         return PAM_AUTH_ERR;
     }
     
-    if ( delta_session == 0 && delta_button <= 0 )
-    {
+    if ( delta_session == 0 && delta_button <= 0 ) {
         ykdbDatabaseClose(handle);
-        D("OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button);
+        D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button));
         return PAM_AUTH_ERR;
     }
     
@@ -402,14 +353,12 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode)
 
     /* re-encrypt and write to database */
     if ( entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID ||
-         entry.flags & YKDB_TOKEN_ENC_PASSCODE )
-    {
+            entry.flags & YKDB_TOKEN_ENC_PASSCODE ) {
         aesEncryptCBC((uint8_t *)&entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_hash, ticket_enc_hash+16);
     }
 
     /* re-encrypt and write to database */
-    if ( ykdbEntryWrite(handle, &entry) != YKDB_SUCCESS )
-    {
+    if ( ykdbEntryWrite(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
         return PAM_AUTHINFO_UNAVAIL;
     }

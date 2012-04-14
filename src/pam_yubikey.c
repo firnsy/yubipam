@@ -40,7 +40,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <syslog.h>
 #include "libyubipam.h"
 
 /* Libtool defines PIC for shared objects */
@@ -58,12 +57,6 @@
     #include <security/pam_appl.h>
 #endif
 #include <security/pam_modules.h>
-
-#if defined(DEBUG) && defined(HAVE_SECURITY__PAM_MACROS_H)
-    #include <security/_pam_macros.h>
-#else
-    #define D(x)    /* nothing */
-#endif
 
 #ifndef PAM_EXTERN
     #ifdef PAM_STATIC
@@ -83,7 +76,6 @@
 #define MAX_FD_NO 10000
 
 char *get_response(pam_handle_t *, const char *, const char *, int);
-static int _yubi_run_helper_binary(pam_handle_t *, const char *, const char *);
 
 PAM_EXTERN int
 pam_sm_authenticate (pam_handle_t *pamh,
@@ -97,24 +89,24 @@ pam_sm_authenticate (pam_handle_t *pamh,
     int verbose_otp = 0;
     int two_factor = 0;
 
-    D (("called."));
-    D (("flags %d argc %d", flags, argc));
+    D((LOG_DEBUG, "called."));
+    D((LOG_DEBUG, "flags %d argc %d", flags, argc));
     for (i=0; i<argc; i++) {
-        D (("argv[%d]=%s", i, argv[i]));
+        D((LOG_DEBUG, "argv[%d]=%s", i, argv[i]));
         if (strncmp(argv[i], "verbose_otp", 11) == 0)
             verbose_otp = 1;
         else if (strncmp(argv[i], "two_factor", 10) == 0)
             two_factor = 1;
     }
-    D (("verbose=%d", verbose_otp));
+    D((LOG_DEBUG, "verbose=%d", verbose_otp));
 
     /* obtain the user requesting authentication */
     retval = pam_get_user(pamh, &user, NULL);
     if (retval != PAM_SUCCESS) {
-        D (("get user returned error: %s", pam_strerror(pamh, retval)));
+        D((LOG_DEBUG, "get user returned error: %s", pam_strerror(pamh, retval)));
         return retval;
     }
-    D (("get user returned: %s", user));
+    D((LOG_DEBUG, "get user returned: %s", user));
 
     /* prompt for the Yubikey OTP (always) */
     otp = get_response(pamh, "Yubikey OTP", user, verbose_otp);
@@ -125,17 +117,19 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-    D (("pass: %s (%d)", otp_passcode, strlen(otp_passcode)));
+    D((LOG_DEBUG, "pass: %s (%d)", otp_passcode, strlen(otp_passcode)));
 
     retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
 
     if (retval != PAM_SUCCESS) {
-        D (("set_item returned error: %s", pam_strerror (pamh, retval)));
+        D((LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval)));
         return retval;
     }
     
-    retval = _yubi_run_helper_binary(pamh, otp_passcode, user);
-    return retval;
+    retval = _yubi_run_helper_binary(otp_passcode, user);
+    if (retval == 0)
+        return PAM_SUCCESS;
+    return PAM_AUTH_ERR;
 }
 
 PAM_EXTERN int
@@ -166,7 +160,7 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
 
     retval = pam_get_item(pamh, PAM_CONV, (const void**) &conv);
     if (retval != PAM_SUCCESS) {
-        D (("get conv returned error: %s", pam_strerror (pamh, retval)));
+        D((LOG_DEBUG, "get conv returned error: %s", pam_strerror (pamh, retval)));
         return NULL;
     }
 
@@ -192,13 +186,13 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
         return NULL;
 
     if (retval != PAM_SUCCESS) {
-        D (("conv returned error: %s", pam_strerror (pamh, retval)));
+        D((LOG_DEBUG, "conv returned error: %s", pam_strerror (pamh, retval)));
         free(resp->resp);
         free(resp);
         return NULL;
     }
 
-    D (("conv returned: %s", resp->resp));
+    D((LOG_DEBUG, "conv returned: %s", resp->resp));
     response = resp->resp;
 	
     free(resp);
@@ -217,107 +211,4 @@ struct pam_module _pam_yubikey_modstruct = {
 };
 #endif
 
-
-/*
- * verify the OTP/passcode of a user
- * this code is from Linux-PAM pam_unix support.c
- */
-static int _yubi_run_helper_binary(pam_handle_t *pamh, const char *otp_passcode, const char *user) {
-    int retval;
-    int child;
-    int fds[2];
-    void (*sighandler)(int) = NULL;
-
-    D(("called."));
-
-    /* create a pipe for the OTP/passcode */
-    if (pipe(fds) != 0) {
-        D(("could not make pipe"));
-        return PAM_AUTH_ERR;
-    }
-
-    sighandler = signal(SIGCHLD, SIG_DFL);
-
-    /* fork */
-    child = fork();
-    if (child == 0) {
-        int i = 0;
-        struct rlimit rlim;
-        static char *envp[] = { NULL };
-        char *args[] = { NULL, NULL, NULL, NULL };
-
-        /* reopen stdin as pipe */
-        dup2(fds[0], STDIN_FILENO);
-	
-        if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
-            if (rlim.rlim_max >= MAX_FD_NO)
-                rlim.rlim_max = MAX_FD_NO;
-
-            for (i=0; i<(int)rlim.rlim_max; i++) {
-                if (i != STDIN_FILENO)
-                    close(i);
-            }
-        }
-	
-        if (geteuid() == 0) {
-            /* must set the real uid to 0 so the helper will not error
-             * out if pam is called from setuid binary (su, sudo...) */
-            setuid(0);
-        }
-	
-        /* exec binary helper */
-        args[0] = strdup(CHKPWD_HELPER);
-        args[1] = strdup(user);
-	
-        execve(CHKPWD_HELPER, args, envp);
-	
-        /* should not get here: exit with error */
-        D(("helper binary is not available"));
-        exit(PAM_AUTHINFO_UNAVAIL);
-    } else if (child > 0) {
-        /* wait for child
-         * if the stored OTP/passcode is NULL */
-        int rc = 0;
-
-        if (otp_passcode != NULL) { /* send the OTP/passcode to the child */
-            if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 ) {
-                D(("cannot send OTP/passcode to helper"));
-                close(fds[1]);
-                retval = PAM_AUTH_ERR;
-            }
-            otp_passcode = NULL;
-        } else {
-            if ( write(fds[1], "", 1) == -1 ) { /* blank OTP/passcode */
-                D(("cannot send OTP/passcode to helper"));
-                close(fds[1]);
-                retval = PAM_AUTH_ERR;
-            }
-        }
-
-        close(fds[0]); /* close here to avoid possible SIGPIPE above */
-        close(fds[1]);
-
-        rc = waitpid(child, &retval, 0); /* wait for helper to complete */
-
-        if (rc < 0) {
-            syslog(LOG_ERR, "%s: yk_chkpwd waitpid returned %d: %m", __FUNCTION__, rc);
-            D(("yk_chkpwd waitpid returned %d: %m", rc));
-            retval = PAM_AUTH_ERR;
-        } else {
-            retval = WEXITSTATUS(retval);
-        }
-    } else {
-        D(("fork failed"));
-        close(fds[0]);
-        close(fds[1]);
-        retval = PAM_AUTH_ERR;
-    }
-
-    if (sighandler != SIG_ERR) {
-        (void) signal(SIGCHLD, sighandler); /* restore old signal handler */
-    }
-
-    D(("returning %d", retval));
-    return retval;
-}
 
