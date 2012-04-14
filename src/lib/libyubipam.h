@@ -26,7 +26,6 @@
 #define __LIB_YUBIPAM_H__
 
 #include "yubikey_common.h"
-
 #include "yubikey_err.h"
 #include "yubikey_db.h"
 #include "yubikey_util.h"

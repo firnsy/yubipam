@@ -34,7 +34,6 @@
 * Acknowlegements:
 *   1. This code is derived from the works of Andrew G. Morgan, 1996 in the
 *      Linux-PAM project, specfically support.c
-*   2. This addition was intiated by Geoff Hoff
 *
 */
 

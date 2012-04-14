@@ -26,53 +26,53 @@
 
 #include <stdint.h>
 
-#define YKDB_MAGIC			"YKDB"
-#define YKDB_MAGIC_SIZE		4
-#define YKDB_VERSION		0x01
-#define YKDB_KEY_BYTE_SIZE	16
+#define YKDB_MAGIC "YKDB"
+#define YKDB_MAGIC_SIZE 4
+#define YKDB_VERSION 0x01
+#define YKDB_KEY_BYTE_SIZE 16
 
-#define YKDB_SUCCESS		0
-#define YKDB_ERR_ARGS		1
-#define YKDB_ERR_IO			2
-#define YKDB_ERR_SEEK		3
-#define YKDB_ERR_LOCK		4
-#define YKDB_ERR_DB_INV		5
-#define YKDB_ERR_DB_EMPTY	6
+#define YKDB_SUCCESS 0
+#define YKDB_ERR_ARGS 1
+#define YKDB_ERR_IO 2
+#define YKDB_ERR_SEEK 3
+#define YKDB_ERR_LOCK 4
+#define YKDB_ERR_DB_INV 5
+#define YKDB_ERR_DB_EMPTY 6
 
-#define YKDB_TOKEN_ENC_PUBLIC_UID	0x01
-#define YKDB_TOKEN_ENC_PASSCODE		0x02
-#define YKDB_TOKEN_STATIC			0x04
+#define YKDB_TOKEN_ENC_PUBLIC_UID 0x01
+#define YKDB_TOKEN_ENC_PASSCODE	0x02
+#define YKDB_TOKEN_STATIC 0x04
 
-#define YKDB_SEEK_CURRENT   1
-#define YKDB_SEEK_START     2
+#define YKDB_SEEK_CURRENT 1
+#define YKDB_SEEK_START 2
 
 extern int ykdb_errno;
 
 /* data types */
 struct _ykdb_header {
-	uint8_t				magic[YKDB_MAGIC_SIZE];
-	uint8_t				version;
-	uint32_t			entry_count;
+    uint8_t magic[YKDB_MAGIC_SIZE];
+    uint8_t version;
+    uint32_t entry_count;
 } __attribute__((__packed__));
 typedef struct _ykdb_header ykdb_header;
 
 struct _ykdb_entry_ticket {
-	uint8_t				key[YKDB_KEY_BYTE_SIZE];
-	uint8_t				private_uid_hash[32];
-	uint16_t			last_session;
-	uint8_t				last_timestamp_hi;
-	uint16_t			last_timestamp_lo;
-	uint8_t				last_button;
-	uint8_t				reserved[42];
+    uint8_t key[YKDB_KEY_BYTE_SIZE];
+    uint8_t private_uid_hash[32];
+    uint16_t last_session;
+    uint8_t last_timestamp_hi;
+    uint16_t last_timestamp_lo;
+    uint8_t last_button;
+    uint8_t reserved[42];
 } __attribute__((__packed__));
 typedef struct _ykdb_entry_ticket ykdb_entry_ticket;
 
 struct _ykdb_entry {
-	uint8_t				user_hash[32];
-	uint8_t				public_uid_hash[32];
-	uint8_t				passcode_hash[32];
-	uint8_t				flags;
-	ykdb_entry_ticket	ticket;
+    uint8_t user_hash[32];
+    uint8_t public_uid_hash[32];
+    uint8_t passcode_hash[32];
+    uint8_t flags;
+    ykdb_entry_ticket ticket;
 } __attribute__((__packed__));
 typedef struct _ykdb_entry ykdb_entry; 
 
