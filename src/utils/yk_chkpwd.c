@@ -70,8 +70,6 @@ static int selinux_enabled=-1;
 
 #define MAXPASS 129 /* the maximum length of a OTP/passcode */
 
-int _yubi_verify_otp_passcode(char *, char *);
-
 static void su_sighandler(int sig) {
 #ifndef SA_RESETHAND
     /* emulate the behaviour of the SA_RESETHAND flag */
@@ -122,80 +120,6 @@ static char *getuidname(uid_t uid) {
     return username;
 }
 
-
-int main(int argc, char *argv[]) {
-    char pass[MAXPASS + 1];
-    int npass;
-    int force_failure = 0;
-    int retval = PAM_AUTH_ERR;
-    char *user;
-
-    /*
-     * Catch or ignore as many signal as possible.
-     */
-    setup_signals();
-
-    /*
-     * we establish that this program is running with non-tty stdin.
-     * this is to discourage casual use. It does *NOT* prevent an
-     * intruder from repeatadly running this program to determine the
-     * OTP/passcode of the current user (brute force attack, but one for
-     * which the attacker must already have gained access to the user's
-     * account).
-     */
-
-    if (isatty(STDIN_FILENO) || argc != 2 ) {
-        syslog(LOG_NOTICE
-              ,"inappropriate use of Unix helper binary [UID=%d]"
-             ,getuid());
-        fprintf(stderr
-         ,"This binary is not designed for running in this way\n"
-              "-- the system administrator has been informed\n");
-        sleep(10);    /* this should discourage/annoy the user */
-        return PAM_SYSTEM_ERR;
-    }
-    
-    /*
-     * Determine what the current user's name is.
-     * On a SELinux enabled system with a strict policy leaving the
-     * existing check prevents shadow password authentication from working.
-     * We must thus skip the check if the real uid is 0.
-     */
-    if (getuid() == 0) {
-        user=argv[1];
-    } else {
-        user = getuidname(getuid());
-        /* if the caller specifies the username, verify that user
-         matches it */
-        if (strcmp(user, argv[1])) {
-            syslog(LOG_NOTICE
-              ,"mismatch of %s|%s", user, argv[1]);
-            return PAM_AUTH_ERR;
-        }
-    }
-
-    /* read the OTP/passcode from stdin (a pipe from the pam_yubikey module) */
-    npass = read(STDIN_FILENO, pass, MAXPASS);
-
-    if (npass < 0) {       /* is it a valid OTP/passcode? */
-        syslog(LOG_DEBUG, "no OTP/passcode supplied");
-    } else if (npass >= MAXPASS) {
-        syslog(LOG_DEBUG, "OTP/passcode too long");
-    } else {
-        pass[npass] = '\0';    /* NUL terminate */
-        retval = _yubi_verify_otp_passcode(user, pass);
-    }
-
-    memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
-
-    /* return pass or fail */
-    if ((retval != PAM_SUCCESS) || force_failure) {
-        syslog(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
-        return PAM_AUTH_ERR;
-    }
-    
-    return retval;
-}
 
 int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     int i;
@@ -364,5 +288,81 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     }
 
     return PAM_SUCCESS;
+}
+
+
+// Main
+int main(int argc, char *argv[]) {
+    char pass[MAXPASS + 1];
+    int npass;
+    int force_failure = 0;
+    int retval = PAM_AUTH_ERR;
+    char *user;
+
+    /*
+     * Catch or ignore as many signal as possible.
+     */
+    setup_signals();
+
+    /*
+     * we establish that this program is running with non-tty stdin.
+     * this is to discourage casual use. It does *NOT* prevent an
+     * intruder from repeatadly running this program to determine the
+     * OTP/passcode of the current user (brute force attack, but one for
+     * which the attacker must already have gained access to the user's
+     * account).
+     */
+
+    if (isatty(STDIN_FILENO) || argc != 2 ) {
+        syslog(LOG_NOTICE
+              ,"inappropriate use of Unix helper binary [UID=%d]"
+             ,getuid());
+        fprintf(stderr
+         ,"This binary is not designed for running in this way\n"
+              "-- the system administrator has been informed\n");
+        sleep(10);    /* this should discourage/annoy the user */
+        return PAM_SYSTEM_ERR;
+    }
+    
+    /*
+     * Determine what the current user's name is.
+     * On a SELinux enabled system with a strict policy leaving the
+     * existing check prevents shadow password authentication from working.
+     * We must thus skip the check if the real uid is 0.
+     */
+    if (getuid() == 0) {
+        user=argv[1];
+    } else {
+        user = getuidname(getuid());
+        /* if the caller specifies the username, verify that user
+         matches it */
+        if (strcmp(user, argv[1])) {
+            syslog(LOG_NOTICE
+              ,"mismatch of %s|%s", user, argv[1]);
+            return PAM_AUTH_ERR;
+        }
+    }
+
+    /* read the OTP/passcode from stdin (a pipe from the pam_yubikey module) */
+    npass = read(STDIN_FILENO, pass, MAXPASS);
+
+    if (npass < 0) {       /* is it a valid OTP/passcode? */
+        syslog(LOG_DEBUG, "no OTP/passcode supplied");
+    } else if (npass >= MAXPASS) {
+        syslog(LOG_DEBUG, "OTP/passcode too long");
+    } else {
+        pass[npass] = '\0';    /* NUL terminate */
+        retval = _yubi_verify_otp_passcode(user, pass);
+    }
+
+    memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
+
+    /* return pass or fail */
+    if ((retval != PAM_SUCCESS) || force_failure) {
+        syslog(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
+        return PAM_AUTH_ERR;
+    }
+    
+    return retval;
 }
 

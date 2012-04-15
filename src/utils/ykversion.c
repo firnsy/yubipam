@@ -1,9 +1,7 @@
 /*
-* YubiKey PAM Validate Module
+* YubiKey PAM Version Module
 *
 * Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
-* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
-* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -21,14 +19,16 @@
 * http://www.gnu.org/copyleft/gpl.html
 */
 
-#ifndef __YK_VERSION_H__
-#define __YK_VERSION_H__
+#include <stdio.h>
+#include "ykversion.h"
 
-#define VER_MAJOR "1"
-#define VER_MINOR "2"
-#define VER_REVISION "0"
-#define VER_BUILD "102"
+void showVersion(const char *title) {
+    fprintf(stderr, "\n"
+        "%s\n"
+        "Version %s.%s.%s (Build %s)\n\n"
+        "Originally written by the SecurixLive team,\n"
+        "Current maintainer Jeroen Nijhof <jeroen@jeroennijhof.nl>,\n"
+        "Project page http://sourceforge.net/projects/pam-yubikey\n"
+        "\n", title, VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD);
+}
 
-void showVersion(const char *title);
-
-#endif /* __YK_VERSION_H__*/ 

@@ -23,7 +23,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
 
 #include <getopt.h>
@@ -36,91 +36,12 @@
 #include "ykvalidate.h"
 #include "libyubipam.h"
 
-char *progname;
 int mode;
-
 char *user = NULL;
 char *otp = NULL;
 
-void cleanExit(int);
-void parseCommandLine(int, char **);
-void showUsage(char *);
-int showVersion(void);
 
-int main(int argc, char *argv[])
-{
-    int    ret = 0;
-
-    char otp_passcode[128];
-    char *passcode = NULL;
-
-    struct passwd *pw;
-
-    progname = argv[0];
-    parseCommandLine(argc, argv);
-
-    if (mode & MODE_VALIDATE)
-    {
-        if ( NULL == user )
-        {
-            /* get passwd structure for current user */
-            pw = getPWEnt();
- 
-            if ( NULL == pw )
-            {
-                fprintf(stderr, "Can't determine your user name!\n");
-                cleanExit(1);
-            }
-            
-            user = strdup(pw->pw_name);
-        }
- 
-        /* get passwd structure for desired user */
-        pw = getpwnam(user);
-     
-        if ( NULL == pw )
-        {
-            fprintf(stderr, "Unknown user: %s\n", user);
-            cleanExit(1);
-        }
-     
-        if (otp == NULL)
-        {
-            fprintf(stderr, "You must at least provide an OTP!\n\n");
-            showUsage(progname);
-            cleanExit(1);
-        }
-
-        if ( mode & MODE_PASSCODE )
-        {
-            passcode = getInput("Yubikey Passcode", 64, 0, GETLINE_FLAGS_DEFAULT);
-        }
-
-        snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-        ret = _yubi_run_helper_binary(otp_passcode, user);
-
-        printf("%s: ", user);
-
-        if (ret != 0)    
-            printf("OTP is INVALID!\n");
-        else
-            printf("OTP is VALID.\n");
-    }
-    else if (mode == MODE_USAGE)
-    {
-        showUsage(progname);
-    }
-    else if (mode == MODE_VERSION)
-    {
-        showVersion();
-    }
-
-    cleanExit(ret);
-    return 0;
-}
-
-void showUsage(char *program_name)
-{
+void showUsage(char *program_name) {
     fprintf(stdout, "USAGE: %s [-u|--user USER] OTP\n", program_name);
     fprintf(stdout, "   -c          Prompt for second factor pass code\n");
     fprintf(stdout, "   -u <user>   Apply configuration to <user>\n");
@@ -132,31 +53,10 @@ void showUsage(char *program_name)
     fprintf(stdout, "\n");
 }
 
-void cleanExit(int mode)
-{
+void clean(void) {
     /* free any and all allocated memory */
     free(user);
     free(otp);
-
-    /* exit as required */
-    exit(mode);
-}
-
-/*
-** showUsage
-**
-** Description:
-**   Show program version.
-*/
-int showVersion(void)
-{
-    fprintf(stderr, "\n"
-                       "ykvalidate - Yubikey OTP/Passcode Validation Utility\n"
-                    "Version %s.%s.%s (Build %s)\n"
-                    "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
-                    "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
-
-    return 0;
 }
 
 static char *valid_options = "?u:c:V";
@@ -165,15 +65,14 @@ static char *valid_options = "?u:c:V";
 #define LONGOPT_ARG_REQUIRED 1
 #define LONGOPT_ARG_OPTIONAL 2
 static struct option long_options[] = {
-   {"help", LONGOPT_ARG_NONE, NULL, '?'},
-   {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
-   {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-   {0, 0, 0, 0}
+    {"help", LONGOPT_ARG_NONE, NULL, '?'},
+    {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
+    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
+    {0, 0, 0, 0}
 };
 
-void parseCommandLine(int argc, char *argv[])
-{
-    int ch;                         /* storage var for getopt info */
+void parseCommandLine(int argc, char *argv[]) {
+    int ch;    /* storage var for getopt info */
     int option_index = -1;
 
     /* just to be sane.. */
@@ -188,10 +87,8 @@ void parseCommandLine(int argc, char *argv[])
     optopt = 0;
 
     /* loop through each command line var and process it */
-    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1)
-    {
-        switch(ch)
-        {
+    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1) {
+        switch(ch) {
             case 'u': /* Explicitly defined user */
                 user = strdup(optarg);
                 break;
@@ -211,14 +108,78 @@ void parseCommandLine(int argc, char *argv[])
     }
     
     /* there should be at least one left over argument */
-    if (optind < argc)
-    {
+    if (optind < argc) {
         /* an explicit declaration overrides this */
-        if (NULL == otp)
-        {
+        if (otp == NULL) {
             /* grab the first additional argument as the user name */
             otp = strdup(argv[optind]);
         }
     }
 }
 
+
+// Main
+int main(int argc, char *argv[]) {
+    char *progname = NULL;
+    int ret = 0;
+
+    char otp_passcode[128];
+    char *passcode = NULL;
+
+    struct passwd *pw;
+
+    progname = argv[0];
+    parseCommandLine(argc, argv);
+
+    if (mode & MODE_VALIDATE) {
+        if ( NULL == user ) {
+            /* get passwd structure for current user */
+            pw = getPWEnt();
+ 
+            if ( NULL == pw ) {
+                fprintf(stderr, "Can't determine your user name!\n");
+                clean();
+                exit(EXIT_FAILURE);
+            }
+            
+            user = strdup(pw->pw_name);
+        }
+ 
+        /* get passwd structure for desired user */
+        pw = getpwnam(user);
+     
+        if ( NULL == pw ) {
+            fprintf(stderr, "Unknown user: %s\n", user);
+            clean();
+            exit(EXIT_FAILURE);
+        }
+     
+        if (otp == NULL) {
+            fprintf(stderr, "You must at least provide an OTP!\n\n");
+            showUsage(progname);
+            clean();
+            exit(EXIT_FAILURE);
+        }
+
+        if ( mode & MODE_PASSCODE ) {
+            passcode = getInput("Yubikey Passcode", 64, 0, GETLINE_FLAGS_DEFAULT);
+        }
+
+        snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+        ret = _yubi_run_helper_binary(otp_passcode, user);
+
+        printf("%s: ", user);
+
+        if (ret != 0)    
+            printf("OTP is INVALID!\n");
+        else
+            printf("OTP is VALID.\n");
+    } else if (mode == MODE_USAGE) {
+        showUsage(progname);
+    } else if (mode == MODE_VERSION) {
+        showVersion("ykvalidate - Yubikey OTP/Passcode Validation Utility");
+    }
+
+    clean();
+    return 0;
+}

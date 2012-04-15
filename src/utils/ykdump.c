@@ -22,7 +22,7 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
 
 #include <getopt.h>
@@ -35,224 +35,20 @@
 #include "libyubipam.h"
 #include "ykdump.h"
 
-
-char *progname;
-
-int    amroot;
-
-uint8_t    public_uid_bin[PUBLIC_UID_BYTE_SIZE];
-uint8_t    public_uid_bin_size = 0;
+uint8_t public_uid_bin[PUBLIC_UID_BYTE_SIZE];
+uint8_t public_uid_bin_size = 0;
 uint32_t entry_idx;
 
-int    mode;
+int mode;
 ykdb_entry entry;
 ykdb_h *handle;
 yk_ticket tkt;
 char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 
-
 extern int ykdb_errno;
 extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
-int showUsage(char *progam_name);
-int showVersion(void);
-void parseCommandLine(int argc, char *argv[]);
-
-void cleanExit(int mode);
-
-int main (int argc, char *argv[])
-{
-    int                    ret;
-    int entry_count;
-
-    /* save the program name */
-    progname = argv[0];
-
-    /* set default values for the entry */
-    entry.flags = YKDB_TOKEN_ENC_PUBLIC_UID;
-    entry.ticket.last_session = 0x0000;
-    entry.ticket.last_timestamp_lo = 0x0000;
-    entry.ticket.last_timestamp_hi = 0x00;
-    entry.ticket.last_button = 0x00;
-    
-    amroot = ( getuid() == 0 );
-
-    parseCommandLine(argc, argv);
-
-    /* open the DB if we are actually searching */
-    if ( mode & (MODE_SEARCH_USER | MODE_SEARCH_PUBLIC | MODE_SEARCH_INDEX | MODE_DUMP_ALL) )
-    {
-        /* check if we have privelege to update users information */
-        if ( !amroot )
-        {
-            fprintf(stderr, "You need root provileges to dump the yubikey database.\n");
-            cleanExit(1);
-        }
-    
-        /* Get perms */
-        setregid( getegid(), -1 );
-
-        /* open the db or create if empty */
-        handle = ykdbDatabaseOpenReadOnly(dbname);
-        if (handle == NULL)
-        {
-            printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
-            cleanExit(1);
-        }
-    }
-
-    entry_count = ykdbDatabaseEntryCountGet(handle);
-
-    if ( entry_count == 0 )
-    {
-        printf("The database is empty.\n");
-        cleanExit(0);
-    }
-
-    if ( mode & MODE_SEARCH_INDEX )
-    {
-        fprintf(stdout, "Searching on index.\n");
-
-        if ( ykdbEntrySeekOnIndex(handle, entry_idx) == YKDB_SUCCESS )
-            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
-            {
-                fprintf(stdout, "Index: %d\n", entry_idx);
-                ykdbPrintEntry(&entry);
-            }
-    }
-    else if ( (mode & MODE_SEARCH_USER) && (mode & MODE_SEARCH_PUBLIC) )
-    {
-        fprintf(stdout, "Searching on both user and public UID.\n");
-
-        /* we should only have one entry but loop anyway*/
-        while ( (ret=ykdbEntrySeekOnUserPublicHash(handle,
-                                                (uint8_t *)&entry.user_hash,
-                                                (uint8_t *)&entry.public_uid_hash,
-                                                YKDB_SEEK_CURRENT
-                                              )) == YKDB_SUCCESS )
-        {
-            
-            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
-            {
-                ykdbEntryGetIndex(handle, &entry_idx);
-                fprintf(stdout, "Index: %d\n", entry_idx);
-                ykdbPrintEntry(&entry);
-            }
-            else
-                fprintf(stderr, "Unable to read entry. Skipping.\n");
-
-            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
-                break;
-        }
-    }
-    else if (mode & MODE_SEARCH_USER)
-    {
-        fprintf(stdout, "Searching on user only.\n");
-
-        while ( (ret=ykdbEntrySeekOnUserHash(handle, (uint8_t *)&entry.user_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS)
-        {
-            
-            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
-            {
-                ykdbEntryGetIndex(handle, &entry_idx);
-                fprintf(stdout, "Index: %d\n", entry_idx);
-                ykdbPrintEntry(&entry);
-            }
-            else
-                fprintf(stderr, "Unable to read entry. Skipping.\n");
-
-            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
-                break;
-        }
-    }
-    else if (mode & MODE_SEARCH_PUBLIC)
-    {
-        fprintf(stdout, "Searching on public UID only.\n");
-        
-        while ( (ret=ykdbEntrySeekOnPublicHash(handle, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS)
-        {
-            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
-            {
-                ykdbEntryGetIndex(handle, &entry_idx);
-                fprintf(stdout, "Index: %d\n", entry_idx);
-                ykdbPrintEntry(&entry);
-            }
-            else
-                fprintf(stderr, "Unable to read entry. Skipping.\n");
-
-            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
-                break;
-        }
-    }
-    else if (mode == MODE_DUMP_ALL)
-    {
-        fprintf(stdout, "Dumping all entries.\n");
-
-        ret = YKDB_SUCCESS;
-        int index = 0;
-
-        while ( ret == YKDB_SUCCESS )
-        {
-            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS )
-            {
-                fprintf(stdout, "Index: %d\n", index);
-                ykdbPrintEntry(&entry);
-                fprintf(stdout, "\n");
-            }
-            else
-                fprintf(stderr, "Unable to read entry. Skipping.\n");
-
-            index++;
-            ret = ykdbEntryNext(handle);
-        }
-    }
-    else if (mode == MODE_VERSION)
-    {
-        showVersion();
-    }
-    else
-    {
-        showUsage(progname);
-        cleanExit(1);
-    }
-
-    /* close the db */
-    ykdbDatabaseClose(handle);
-
-    cleanExit(0);
-    return 0;
-}
-
-/*
-** cleanExit
-**
-** Description:
-**   Cleans up any memory that was allocated prior to exit.
-**
-** Arguments:
-**   int mode                    exit number
-*/
-void cleanExit(int mode)
-{
-    /* free any and all allocated memory */
-
-    /* exit as required */
-    exit(mode);
-}
-
-
-
-/*
-** showUsage
-**
-** Description:
-**   Show program usage.
-**
-** Arguments:
-**   char *program_name            program name
-*/
-int showUsage(char *program_name)
-{
+int showUsage(char *program_name) {
     fprintf(stdout, "USAGE: %s [-options] [-u <user>] [-f <uid>]\n", program_name);
     fprintf(stdout, "\n");
     fprintf(stdout, "Options:\n");
@@ -277,43 +73,25 @@ int showUsage(char *program_name)
     return 0;
 }
 
-/*
-** showUsage
-**
-** Description:
-**   Show program version.
-*/
-int showVersion(void)
-{
-    fprintf(stderr, "\n"
-                       "ykdump - Yubikey Database Dumping Utility\n"
-                    "Version %s.%s.%s (Build %s)\n"
-                    "By the SecurixLive team: http://www.securixlive.com/contact.html\n"
-                    "\n", VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD); 
-
-    return 0;
-}
-
 static char *valid_options = "?u:f:i:VD:d";
 
 #define LONGOPT_ARG_NONE 0
 #define LONGOPT_ARG_REQUIRED 1
 #define LONGOPT_ARG_OPTIONAL 2
 static struct option long_options[] = {
-   {"help", LONGOPT_ARG_NONE, NULL, '?'},
-   {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
-   {"public", LONGOPT_ARG_REQUIRED, NULL, 'f'},
-   {"index", LONGOPT_ARG_REQUIRED, NULL, 'i'},
-   {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
-   {"dumpall", LONGOPT_ARG_NONE, NULL, 'd'},
-   {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-   {"help", LONGOPT_ARG_NONE, NULL, '?'},
-   {0, 0, 0, 0}
+    {"help", LONGOPT_ARG_NONE, NULL, '?'},
+    {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
+    {"public", LONGOPT_ARG_REQUIRED, NULL, 'f'},
+    {"index", LONGOPT_ARG_REQUIRED, NULL, 'i'},
+    {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
+    {"dumpall", LONGOPT_ARG_NONE, NULL, 'd'},
+    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
+    {"help", LONGOPT_ARG_NONE, NULL, '?'},
+    {0, 0, 0, 0}
 };
 
-void parseCommandLine(int argc, char *argv[])
-{
-    int ch;                         /* storage var for getopt info */
+void parseCommandLine(int argc, char *argv[]) {
+    int ch;    /* storage var for getopt info */
     int option_index = -1;
 
     /* just to be sane.. */
@@ -328,10 +106,8 @@ void parseCommandLine(int argc, char *argv[])
     optopt = 0;
 
     /* loop through each command line var and process it */
-    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1)
-    {
-        switch(ch)
-        {
+    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1) {
+        switch(ch) {
             case 'D':
                 snprintf(dbname, 512, "%s", optarg);
                 break;
@@ -361,31 +137,156 @@ void parseCommandLine(int argc, char *argv[])
                 break;
 
             case 'f': /* Public UID */
-                if ( !checkHexString((const uint8_t *)optarg) )
-                {
+                if ( !checkHexString((const uint8_t *)optarg) ) {
                     public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
                     getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
 
-                }
-                else if ( !checkModHexString((const uint8_t *)optarg) )
-                {
+                } else if ( !checkModHexString((const uint8_t *)optarg) ) {
                     public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
                     getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
-                }
-                else
-                {
+                } else {
                     fprintf(stderr, "Ignoring unknown public UID format.\n");
                 }
-
                 break;
         }    
     }
     
-    /* there may be some left over arguments */
-    if (optind < argc)
-    {
+}
+
+
+// Main
+int main (int argc, char *argv[]) {
+    char *progname = NULL;
+    int amroot = 0;
+    int ret;
+    int entry_count;
+
+    /* save the program name */
+    progname = argv[0];
+
+    /* set default values for the entry */
+    entry.flags = YKDB_TOKEN_ENC_PUBLIC_UID;
+    entry.ticket.last_session = 0x0000;
+    entry.ticket.last_timestamp_lo = 0x0000;
+    entry.ticket.last_timestamp_hi = 0x00;
+    entry.ticket.last_button = 0x00;
+    
+    amroot = ( getuid() == 0 );
+
+    parseCommandLine(argc, argv);
+
+    /* open the DB if we are actually searching */
+    if ( mode & (MODE_SEARCH_USER | MODE_SEARCH_PUBLIC | MODE_SEARCH_INDEX | MODE_DUMP_ALL) ) {
+        /* check if we have privelege to update users information */
+        if ( !amroot ) {
+            fprintf(stderr, "You need root provileges to dump the yubikey database.\n");
+            exit(EXIT_FAILURE);
+        }
+    
+        /* Get perms */
+        setregid( getegid(), -1 );
+
+        /* open the db or create if empty */
+        handle = ykdbDatabaseOpenReadOnly(dbname);
+        if (handle == NULL) {
+            printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
+            exit(EXIT_FAILURE);
+        }
     }
+
+    entry_count = ykdbDatabaseEntryCountGet(handle);
+
+    if ( entry_count == 0 ) {
+        printf("The database is empty.\n");
+        exit(EXIT_SUCCESS);
+    }
+
+    if ( mode & MODE_SEARCH_INDEX ) {
+        fprintf(stdout, "Searching on index.\n");
+
+        if ( ykdbEntrySeekOnIndex(handle, entry_idx) == YKDB_SUCCESS )
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS ) {
+                fprintf(stdout, "Index: %d\n", entry_idx);
+                ykdbPrintEntry(&entry);
+            }
+    } else if ( (mode & MODE_SEARCH_USER) && (mode & MODE_SEARCH_PUBLIC) ) {
+        fprintf(stdout, "Searching on both user and public UID.\n");
+
+        /* we should only have one entry but loop anyway*/
+        while ( (ret=ykdbEntrySeekOnUserPublicHash(handle,
+                (uint8_t *)&entry.user_hash,
+                (uint8_t *)&entry.public_uid_hash,
+                YKDB_SEEK_CURRENT
+                )) == YKDB_SUCCESS ) {
+            
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS ) {
+                ykdbEntryGetIndex(handle, &entry_idx);
+                fprintf(stdout, "Index: %d\n", entry_idx);
+                ykdbPrintEntry(&entry);
+            } else
+                fprintf(stderr, "Unable to read entry. Skipping.\n");
+
+            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
+                break;
+        }
+    } else if (mode & MODE_SEARCH_USER) {
+        fprintf(stdout, "Searching on user only.\n");
+
+        while ( (ret=ykdbEntrySeekOnUserHash(handle, (uint8_t *)&entry.user_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS) {
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS ) {
+                ykdbEntryGetIndex(handle, &entry_idx);
+                fprintf(stdout, "Index: %d\n", entry_idx);
+                ykdbPrintEntry(&entry);
+            } else
+                fprintf(stderr, "Unable to read entry. Skipping.\n");
+
+            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
+                break;
+        }
+    } else if (mode & MODE_SEARCH_PUBLIC) {
+        fprintf(stdout, "Searching on public UID only.\n");
+        
+        while ( (ret=ykdbEntrySeekOnPublicHash(handle, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_CURRENT)) == YKDB_SUCCESS) {
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS ) {
+                ykdbEntryGetIndex(handle, &entry_idx);
+                fprintf(stdout, "Index: %d\n", entry_idx);
+                ykdbPrintEntry(&entry);
+            } else
+                fprintf(stderr, "Unable to read entry. Skipping.\n");
+
+            if ( ykdbEntryNext(handle) != YKDB_SUCCESS )
+                break;
+        }
+    } else if (mode == MODE_DUMP_ALL) {
+        fprintf(stdout, "Dumping all entries.\n");
+
+        ret = YKDB_SUCCESS;
+        int index = 0;
+
+        while ( ret == YKDB_SUCCESS ) {
+            if ( ykdbEntryGet(handle, &entry) == YKDB_SUCCESS ) {
+                fprintf(stdout, "Index: %d\n", index);
+                ykdbPrintEntry(&entry);
+                fprintf(stdout, "\n");
+            } else
+                fprintf(stderr, "Unable to read entry. Skipping.\n");
+
+            index++;
+            ret = ykdbEntryNext(handle);
+        }
+    } else if (mode == MODE_VERSION) {
+        showVersion("ykdump - Yubikey Database Dumping Utility");
+    } else {
+        showUsage(progname);
+        exit(EXIT_FAILURE);
+    }
+
+    /* close the db */
+    ykdbDatabaseClose(handle);
+
+    exit(EXIT_SUCCESS);
+    return 0;
 }
 
