@@ -69,11 +69,12 @@ void clean(void) {
     free(passcode_text);
 }
 
+static char *valid_options = "hadD:cf:k:o:p:V";
+
 int showUsage(char *program_name) {
-    fprintf(stdout, "USAGE: %s [-options] USER\n", program_name);
+    fprintf(stdout, "USAGE: %s [OPTION]... USER\n", program_name);
     fprintf(stdout, "\n");
-    fprintf(stdout, "Options:\n");
-    fprintf(stdout, "   -?          Show this information\n");
+    fprintf(stdout, "   -h          Show this information\n");
     fprintf(stdout, "   -a          Add yubikey to database\n");
     fprintf(stdout, "   -d          Delete yubikey from database\n");
     fprintf(stdout, "   -D <path>   Explicitly define the database <path>\n");
@@ -82,71 +83,20 @@ int showUsage(char *program_name) {
     fprintf(stdout, "   -k <key>    AES key in hex\n");
     fprintf(stdout, "   -o <otp>    Yubikey generated OTP\n");
     fprintf(stdout, "   -p <uid>    Private UID in hex\n");
-//    fprintf(stdout, "   -s          Sync to yubikey dongle\n");
     fprintf(stdout, "   -V          Show version and exit\n");
-    fprintf(stdout, "\n");
-//  fprintf(stdout, "Update options:\n");
-//    fprintf(stdout, "   -F <uid>    Force new public uid in hex\n");
-//    fprintf(stdout, "   -P <uid>    Force new private uid in hex\n");
-//  fprintf(stdout, "\n");
-    fprintf(stdout, "Longname options and their corresponding single char version\n");
-    fprintf(stdout, "   --user <user>   Alternative method for indicating <user>\n");
-//    fprintf(stdout, "   --tab1          Prepend a tab character to the public uid\n");
-//    fprintf(stdout, "   --tab2          Append a tab character to the public uid\n");
-//    fprintf(stdout, "   --tab3          Append a tab character to the encrypted ticket\n");
-//    fprintf(stdout, "   --delay10       Add 10ms intra-key spacing\n");
-//    fprintf(stdout, "   --delay20       Add 20ms intra-key spacing\n");
-//    fprintf(stdout, "   --cr            Append a carriage return as the final character\n");
-//    fprintf(stdout, "   --sendref       Send reference string (0..f) before any data\n");
-//    fprintf(stdout, "   --ticketfirst   Send encrypted ticket before public uid\n");
-    fprintf(stdout, "   --help          Same as -?\n");
-    fprintf(stdout, "   --version       Same as -V\n");
     fprintf(stdout, "\n");
      
     return 0;
 }
 
-static char *valid_options = "?adcf:k:o:p:u:F:P:sVD:";
-
-#define LONGOPT_ARG_NONE 0
-#define LONGOPT_ARG_REQUIRED 1
-#define LONGOPT_ARG_OPTIONAL 2
-static struct option long_options[] = {
-    {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
-    {"tab1", LONGOPT_ARG_NONE, NULL, TF_TAB_1},
-    {"tab2", LONGOPT_ARG_NONE, NULL, TF_TAB_2},
-    {"tab3", LONGOPT_ARG_NONE, NULL, TF_TAB_3},
-    {"delay1", LONGOPT_ARG_NONE, NULL, TF_DELAY_1},
-    {"delay2", LONGOPT_ARG_NONE, NULL, TF_DELAY_2},
-    {"cr", LONGOPT_ARG_NONE, NULL, TF_CR},
-    {"sendref", LONGOPT_ARG_NONE, NULL, CF_SEND_REF},
-    {"ticketfirst", LONGOPT_ARG_NONE, NULL, CF_TICKET_FIRST},
-    {"pacing10", LONGOPT_ARG_NONE, NULL, CF_PACING_10},
-    {"pacing20", LONGOPT_ARG_NONE, NULL, CF_PACING_20},
-    {"static", LONGOPT_ARG_NONE, NULL, CF_STATIC},
-    {"user", LONGOPT_ARG_REQUIRED, NULL, OPT_USER},
-    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-    {"help", LONGOPT_ARG_NONE, NULL, '?'},
-    {0, 0, 0, 0}
-};
-
 void parseCommandLine(int argc, char *argv[]) {
     int ch;                         /* storage var for getopt info */
-    int option_index = -1;
 
     /* just to be sane.. */
     mode = MODE_UPDATE;
 
-    /*
-    **  Set this so we know whether to return 1 on invalid input because we
-    **  use '?' for help and getopt uses '?' for telling us there was an
-    **  invalid option, so we can't use that to tell invalid input. Instead,
-    **  we check optopt and it will tell us.
-    */
-    optopt = 0;
-
     /* loop through each command line var and process it */
-    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1) {
+    while((ch = getopt(argc, argv, valid_options)) != -1) {
         switch(ch) {
             case CF_STATIC:
                 break;
@@ -159,7 +109,7 @@ void parseCommandLine(int argc, char *argv[]) {
                 snprintf(dbname, 512, "%s", optarg);
                 break;
 
-            case '?': /* show help and exit with 1 */
+            case 'h': /* show help and exit with 1 */
                 mode = MODE_USAGE;
                 break;
 

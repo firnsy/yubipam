@@ -48,65 +48,31 @@ char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 extern int ykdb_errno;
 extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
+static char *valid_options = "hD:du:f:i:V";
+
 int showUsage(char *program_name) {
-    fprintf(stdout, "USAGE: %s [-options] [-u <user>] [-f <uid>]\n", program_name);
+    fprintf(stdout, "USAGE: %s [OPTION]...\n", program_name);
     fprintf(stdout, "\n");
-    fprintf(stdout, "Options:\n");
+    fprintf(stdout, "   -h          Show this information\n");
     fprintf(stdout, "   -D <path>   Explicitly define the database <path>\n");
     fprintf(stdout, "   -d          Dump entire database\n");
     fprintf(stdout, "   -u <user>   Search based on <user>\n");
     fprintf(stdout, "   -f <uid>    Search based on public <uid>\n");
     fprintf(stdout, "   -i <index>  Search based on <index> value\n");
-    fprintf(stdout, "   -?          Show this information\n");
     fprintf(stdout, "   -V          Show version and exit\n");
-    fprintf(stdout, "\n");
-    fprintf(stdout, "Longname options and their corresponding single char version\n");
-    fprintf(stdout, "   --database <path>  Same as -u\n");
-    fprintf(stdout, "   --dumpall          Same as -d\n");
-    fprintf(stdout, "   --user <user>      Same as -u\n");
-    fprintf(stdout, "   --public <uid>     Same as -f\n");
-    fprintf(stdout, "   --index <index>    Same as -i\n");
-    fprintf(stdout, "   --help             Same as -?\n");
-    fprintf(stdout, "   --version          Same as -V\n");
     fprintf(stdout, "\n");
      
     return 0;
 }
 
-static char *valid_options = "?u:f:i:VD:d";
-
-#define LONGOPT_ARG_NONE 0
-#define LONGOPT_ARG_REQUIRED 1
-#define LONGOPT_ARG_OPTIONAL 2
-static struct option long_options[] = {
-    {"help", LONGOPT_ARG_NONE, NULL, '?'},
-    {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
-    {"public", LONGOPT_ARG_REQUIRED, NULL, 'f'},
-    {"index", LONGOPT_ARG_REQUIRED, NULL, 'i'},
-    {"database", LONGOPT_ARG_REQUIRED, NULL, 'D'},
-    {"dumpall", LONGOPT_ARG_NONE, NULL, 'd'},
-    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-    {"help", LONGOPT_ARG_NONE, NULL, '?'},
-    {0, 0, 0, 0}
-};
-
 void parseCommandLine(int argc, char *argv[]) {
     int ch;    /* storage var for getopt info */
-    int option_index = -1;
 
     /* just to be sane.. */
     mode = 0;
 
-    /*
-    **  Set this so we know whether to return 1 on invalid input because we
-    **  use '?' for help and getopt uses '?' for telling us there was an
-    **  invalid option, so we can't use that to tell invalid input. Instead,
-    **  we check optopt and it will tell us.
-    */
-    optopt = 0;
-
     /* loop through each command line var and process it */
-    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1) {
+    while((ch = getopt(argc, argv, valid_options)) != -1) {
         switch(ch) {
             case 'D':
                 snprintf(dbname, 512, "%s", optarg);
@@ -128,7 +94,7 @@ void parseCommandLine(int argc, char *argv[]) {
                 mode |= MODE_SEARCH_USER;
                 break;
 
-            case '?': /* show help and exit with 1 */
+            case 'h': /* show help and exit with 1 */
                 mode = MODE_USAGE;
                 break;
 

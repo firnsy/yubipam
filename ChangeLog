@@ -1,9 +1,11 @@
 2012-04-13 - pam-yubikey 1.2
   [*] Changed fork version 1.1-beta1 to version 1.2
   [*] Improvements
+      * Added PAM option debug and removed configure debug option
+      * Fixed getopt options and using getopt short only
       * Moved some global variables to local
       * Moved a lot of duplicated functions to yubikey_util.c
-      * PAM. Using syslog instead of pam_syslog for better portability
+      * Using syslog instead of pam_syslog for better portability
       * Wrote own getline() function for better portability
       * Using normal syslog for debugging
       * Fixed a lot of typecast issues

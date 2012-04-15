@@ -34,13 +34,6 @@
     #define ENDIAN_SWAP_16(x)
 #endif
 
-#include <syslog.h>
-#if defined(DEBUG)
-    #define D(x) syslog x;
-#else
-    #define D(x)    /* nothing */
-#endif
-
 #define SHA256_DIGEST_SIZE (8*sizeof(uint32_t))
 #define MODHEX_MAP "cbdefghijklnrtuv"
 #define HEX_MAP "0123456789abcdef"
@@ -55,7 +48,7 @@ int safeSnprintfAppend(char *buf, size_t buf_size, const char *format, ...);
 int safeStrnlen(const char *buf, int buf_size);
 char *getInput(const char *prompt, int size, int required, uint8_t flags);
 struct passwd *getPWEnt(void);
-int _yubi_run_helper_binary(const char *otp_passcode, const char *user);
+int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debug);
 int checkHexString(const uint8_t *);
 int checkModHexString(const uint8_t *);
 int checkOTPCompliance(const uint8_t *, uint32_t);

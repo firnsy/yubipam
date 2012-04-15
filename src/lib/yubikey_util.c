@@ -1107,17 +1107,19 @@ struct passwd *getPWEnt(void) {
 }
 
 // verify the OTP/passcode of a user
-int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
+int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debug) {
     int retval;
     int child;
     int fds[2];
     void (*sighandler)(int) = NULL;
 
-    D((LOG_DEBUG, "called."));
+    if (debug)
+        syslog(LOG_DEBUG, "called.");
 
     // create a pipe for the OTP/passcode
     if (pipe(fds) != 0) {
-        D((LOG_DEBUG, "could not make pipe"));
+        if (debug)
+            syslog(LOG_DEBUG, "could not make pipe");
         return EXIT_FAILURE;
     }
 
@@ -1153,6 +1155,8 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
         /* exec binary helper */
         args[0] = strdup(CHKPWD_HELPER);
         args[1] = strdup(user);
+        if (debug)
+            args[2] = "-d";
        
         execve(CHKPWD_HELPER, args, envp);
        
@@ -1166,14 +1170,16 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
 
         if (otp_passcode != NULL) { /* send the OTP/passcode to the child */
             if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 ) {
-                D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
+                if (debug)
+                    syslog(LOG_DEBUG, "cannot send OTP/passcode to helper");
                 close(fds[1]);
                 retval = EXIT_FAILURE;
             }
             otp_passcode = NULL;
         } else {
             if ( write(fds[1], "", 1) == -1 ) { /* blank OTP/passcode */
-                D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
+                if (debug)
+                    syslog(LOG_DEBUG, "cannot send OTP/passcode to helper");
                 close(fds[1]);
                 retval = EXIT_FAILURE;
             }
@@ -1191,7 +1197,8 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
             retval = WEXITSTATUS(retval);
         }
     } else {
-        D((LOG_DEBUG, "fork failed"));
+        if (debug)
+            syslog(LOG_DEBUG, "fork failed");
         close(fds[0]);
         close(fds[1]);
         retval = EXIT_FAILURE;
@@ -1201,7 +1208,8 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
         (void) signal(SIGCHLD, sighandler); /* restore old signal handler */
     }
 
-    D((LOG_DEBUG, "returning %d", retval));
+    if (debug)
+        syslog(LOG_DEBUG, "returning %d", retval);
     return retval;
 }
 

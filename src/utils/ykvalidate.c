@@ -36,20 +36,21 @@
 #include "ykvalidate.h"
 #include "libyubipam.h"
 
+int debug = 0;
 int mode;
 char *user = NULL;
 char *otp = NULL;
 
+static char *valid_options = "hu:cdV";
 
 void showUsage(char *program_name) {
-    fprintf(stdout, "USAGE: %s [-u|--user USER] OTP\n", program_name);
-    fprintf(stdout, "   -c          Prompt for second factor pass code\n");
-    fprintf(stdout, "   -u <user>   Apply configuration to <user>\n");
+    fprintf(stdout, "USAGE: %s [OPTION]... OTP\n", program_name);
     fprintf(stdout, "\n");
-    fprintf(stdout, "Longname options and their corresponding single char version\n");
-    fprintf(stdout, "   --user <user>   Same as -u\n");
-    fprintf(stdout, "   --help          Same as -?\n");
-    fprintf(stdout, "   --version       Same as -V\n");
+    fprintf(stdout, "   -h          Show this information\n");
+    fprintf(stdout, "   -u <user>   Apply configuration to <user>\n");
+    fprintf(stdout, "   -c          Prompt for second factor pass code\n");
+    fprintf(stdout, "   -d          Log debug info to syslog\n");
+    fprintf(stdout, "   -V          Show version and exit\n");
     fprintf(stdout, "\n");
 }
 
@@ -59,35 +60,14 @@ void clean(void) {
     free(otp);
 }
 
-static char *valid_options = "?u:c:V";
-
-#define LONGOPT_ARG_NONE 0
-#define LONGOPT_ARG_REQUIRED 1
-#define LONGOPT_ARG_OPTIONAL 2
-static struct option long_options[] = {
-    {"help", LONGOPT_ARG_NONE, NULL, '?'},
-    {"user", LONGOPT_ARG_REQUIRED, NULL, 'u'},
-    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
-    {0, 0, 0, 0}
-};
-
 void parseCommandLine(int argc, char *argv[]) {
     int ch;    /* storage var for getopt info */
-    int option_index = -1;
 
     /* just to be sane.. */
     mode = MODE_VALIDATE;
 
-    /*
-    **  Set this so we know whether to return 1 on invalid input because we
-    **  use '?' for help and getopt uses '?' for telling us there was an
-    **  invalid option, so we can't use that to tell invalid input. Instead,
-    **  we check optopt and it will tell us.
-    */
-    optopt = 0;
-
     /* loop through each command line var and process it */
-    while((ch = getopt_long(argc, argv, valid_options, long_options, &option_index)) != -1) {
+    while((ch = getopt(argc, argv, valid_options)) != -1) {
         switch(ch) {
             case 'u': /* Explicitly defined user */
                 user = strdup(optarg);
@@ -97,8 +77,12 @@ void parseCommandLine(int argc, char *argv[]) {
                 mode |= MODE_PASSCODE;
                 break;
 
-            case '?': /* show help and exit with 1 */
+            case 'h': /* show help and exit with 1 */
                 mode = MODE_USAGE;
+                break;
+
+            case 'd': /* Set debug mode on */
+                debug = 1;
                 break;
 
             case 'V': /* show version information */
@@ -162,11 +146,11 @@ int main(int argc, char *argv[]) {
         }
 
         if ( mode & MODE_PASSCODE ) {
-            passcode = getInput("Yubikey Passcode", 64, 0, GETLINE_FLAGS_DEFAULT);
+            passcode = getInput("Yubikey passcode: ", 64, 0, GETLINE_FLAGS_ECHO_OFF);
         }
 
         snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-        ret = _yubi_run_helper_binary(otp_passcode, user);
+        ret = _yubi_run_helper_binary(otp_passcode, user, debug);
 
         printf("%s: ", user);
 

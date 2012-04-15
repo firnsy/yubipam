@@ -53,6 +53,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <signal.h>
+#include <getopt.h>
 
 #ifdef WITH_SELINUX
 #include <selinux/selinux.h>
@@ -72,7 +73,7 @@ static void su_sighandler(int sig) {
         signal(sig, SIG_DFL);
 #endif
     if (sig > 0) {
-        syslog(LOG_NOTICE, "caught signal %d.", sig);
+        syslog(LOG_AUTH, "caught signal %d.", sig);
         exit(sig);
     }
 }
@@ -116,7 +117,7 @@ static char *getuidname(uid_t uid) {
 }
 
 
-int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
+int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     int i;
 
     yk_ticket tkt;
@@ -141,7 +142,8 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     int otp_len = 0;
     int passcode_len = 0;
 
-    D((LOG_DEBUG, "received OTP/Passcode: %s", otp_passcode ? otp_passcode:""));
+    if (debug)
+        syslog(LOG_DEBUG, "received OTP/Passcode: %s", otp_passcode ? otp_passcode:"");
 
     /* set additional default values for the entry after parsing */
     getSHA256((uint8_t *)user, strlen(user), (uint8_t *)&entry.user_hash);
@@ -157,18 +159,20 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
         if ( passcode_len > 0 )
             strncpy(passcode, pch+1, passcode_len);
     } else {
-        syslog(LOG_NOTICE, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
+        syslog(LOG_AUTH, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
         return EXIT_FAILURE;
     }
     
-    D((LOG_DEBUG, "OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len));
+    if (debug)
+        syslog(LOG_DEBUG, "OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len);
 
     /* perform initial parse to grab public UID */
     parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, NULL);
      
     /* OTP needs the public UID for lookup */
     if (public_uid_bin_size <= 0) {
-        D((LOG_DEBUG, "public_uid has no length, OTP is invalid"));
+        if (debug)
+            syslog(LOG_DEBUG, "public_uid has no length, OTP is invalid");
         return EXIT_FAILURE;
     }
 
@@ -178,14 +182,16 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* open the db or create if empty */
     handle = ykdbDatabaseOpen(CONFIG_AUTH_DB_DEFAULT);
     if (handle == NULL) {
-        D((LOG_DEBUG, "couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT));
+        if (debug)
+            syslog(LOG_DEBUG, "couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT);
         return EXIT_FAILURE;
     }
     
     /* seek to public UID if it exists */
     if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "no entry for user (with that token): %s", user));
+        if (debug)
+            syslog(LOG_DEBUG, "no entry for user (with that token): %s", user);
         return EXIT_FAILURE;
     }
 
@@ -213,7 +219,8 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
 
     /* close off decryption key text and generate encryption hash */
     safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
-    D((LOG_DEBUG, "Encryption Key: %s", ticket_enc_key));
+    if (debug)
+        syslog(LOG_DEBUG, "Encryption Key: %s", ticket_enc_key);
 
     getSHA256(ticket_enc_key, strlen((char *)ticket_enc_key), ticket_enc_hash);
     
@@ -233,7 +240,8 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* no use continuing if the decoded OTP failed */
     if ( crc != CRC_OK_RESIDUE ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "crc invalid: 0x%04x", crc));
+        if (debug)
+            syslog(LOG_DEBUG, "crc invalid: 0x%04x", crc);
 
         return EXIT_FAILURE;
     }
@@ -244,7 +252,8 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* match private uid hashes */
     if ( memcmp(&tkt_private_uid_hash, &entry.ticket.private_uid_hash, 32) ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "private uid mismatch"));
+        if (debug)
+            syslog(LOG_DEBUG, "private uid mismatch");
         return EXIT_FAILURE;
     }
 
@@ -254,13 +263,15 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
 
     if ( delta_session < 0 ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session));
+        if (debug)
+            syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session);
         return EXIT_FAILURE;
     }
     
     if ( delta_session == 0 && delta_button <= 0 ) {
         ykdbDatabaseClose(handle);
-        D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button));
+        if (debug)
+            syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button);
         return EXIT_FAILURE;
     }
     
@@ -292,7 +303,9 @@ int main(int argc, char *argv[]) {
     int npass;
     int force_failure = 0;
     int retval = EXIT_FAILURE;
-    char *user;
+    int debug = 0;
+    int ch;
+    char *user = NULL;
 
     /*
      * Catch or ignore as many signal as possible.
@@ -308,8 +321,8 @@ int main(int argc, char *argv[]) {
      * account).
      */
 
-    if (isatty(STDIN_FILENO) || argc != 2 ) {
-        syslog(LOG_NOTICE
+    if (isatty(STDIN_FILENO) || argc < 2 ) {
+        syslog(LOG_AUTH
             ,"inappropriate use of Unix helper binary [UID=%d]"
             ,getuid());
         fprintf(stderr
@@ -319,20 +332,32 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
+    /* loop through each command line var and process it */
+    while((ch = getopt(argc, argv, "d")) != -1) {
+        switch(ch) {
+            case 'd': /* Set debug mode on */
+                debug = 1;
+                break;
+        }
+    }
+    
+    /* there should be at least one left over argument */
+    if (optind < argc) {
+        /* grab the first additional argument as the user name */
+        user = strdup(argv[optind]);
+    }
+
     /*
      * Determine what the current user's name is.
      * On a SELinux enabled system with a strict policy leaving the
      * existing check prevents shadow password authentication from working.
      * We must thus skip the check if the real uid is 0.
      */
-    if (getuid() == 0) {
-        user=argv[1];
-    } else {
-        user = getuidname(getuid());
+    if (getuid() != 0) {
         /* if the caller specifies the username, verify that user
          matches it */
-        if (strcmp(user, argv[1])) {
-            syslog(LOG_NOTICE
+        if (strcmp(user, getuidname(getuid()))) {
+            syslog(LOG_AUTH
                 ,"mismatch of %s|%s", user, argv[1]);
             return EXIT_FAILURE;
         }
@@ -347,14 +372,14 @@ int main(int argc, char *argv[]) {
         syslog(LOG_DEBUG, "OTP/passcode too long");
     } else {
         pass[npass] = '\0';    /* NUL terminate */
-        retval = _yubi_verify_otp_passcode(user, pass);
+        retval = _yubi_verify_otp_passcode(user, pass, debug);
     }
 
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
 
     /* return pass or fail */
     if ((retval != EXIT_SUCCESS) || force_failure) {
-        syslog(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
+        syslog(LOG_AUTH, "OTP/passcode check failed for user (%s)", user);
         return EXIT_FAILURE;
     }
     

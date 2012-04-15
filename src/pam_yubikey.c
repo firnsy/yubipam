@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <syslog.h>
 #include "libyubipam.h"
 
 /* Libtool defines PIC for shared objects */
@@ -73,6 +74,7 @@
     #define SELINUX_ENABLED 0
 #endif
 
+
 char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int verbose) {
     struct pam_conv *conv;
     int retval;
@@ -84,7 +86,6 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
 
     retval = pam_get_item(pamh, PAM_CONV, (const void**) &conv);
     if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "get conv returned error: %s", pam_strerror (pamh, retval)));
         return NULL;
     }
 
@@ -94,12 +95,7 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
     else
         msg.msg_style = PAM_PROMPT_ECHO_OFF;
 
-    /* ensure user knows when debugging is turned on */
-#ifdef DEBUG
-    sprintf (buffer, "DEBUG MODE!!! %s (%s): ", prompt, user);
-#else
     sprintf (buffer, "%s (%s): ", prompt, user);
-#endif
 
     /* set up the conversation */
     msg.msg = buffer;
@@ -110,13 +106,11 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
         return NULL;
 
     if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "conv returned error: %s", pam_strerror (pamh, retval)));
         free(resp->resp);
         free(resp);
         return NULL;
     }
 
-    D((LOG_DEBUG, "conv returned: %s", resp->resp));
     response = resp->resp;
 	
     free(resp);
@@ -133,27 +127,35 @@ pam_sm_authenticate (pam_handle_t *pamh,
     char *passcode = NULL;
     char otp_passcode[128];
     int i = 0;
+    int debug = 0;
     int verbose_otp = 0;
     int two_factor = 0;
 
-    D((LOG_DEBUG, "called."));
-    D((LOG_DEBUG, "flags %d argc %d", flags, argc));
     for (i=0; i<argc; i++) {
-        D((LOG_DEBUG, "argv[%d]=%s", i, argv[i]));
-        if (strncmp(argv[i], "verbose_otp", 11) == 0)
+        if (strncmp(argv[i], "debug", 5) == 0)
+            debug = 1;
+        else if (strncmp(argv[i], "verbose_otp", 11) == 0)
             verbose_otp = 1;
         else if (strncmp(argv[i], "two_factor", 10) == 0)
             two_factor = 1;
+        if (debug)
+            syslog(LOG_DEBUG, "argv[%d]=%s", i, argv[i]);
     }
-    D((LOG_DEBUG, "verbose=%d", verbose_otp));
+    if (debug) {
+        syslog(LOG_DEBUG, "called.");
+        syslog(LOG_DEBUG, "flags %d argc %d", flags, argc);
+        syslog(LOG_DEBUG, "verbose=%d", verbose_otp);
+    }
 
     /* obtain the user requesting authentication */
     retval = pam_get_user(pamh, &user, NULL);
     if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "get user returned error: %s", pam_strerror(pamh, retval)));
+        if (debug)
+            syslog(LOG_DEBUG, "get user returned error: %s", pam_strerror(pamh, retval));
         return retval;
     }
-    D((LOG_DEBUG, "get user returned: %s", user));
+    if (debug)
+        syslog(LOG_DEBUG, "get user returned: %s", user);
 
     /* prompt for the Yubikey OTP (always) */
     otp = get_response(pamh, "Yubikey OTP", user, verbose_otp);
@@ -164,16 +166,18 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-    D((LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode)));
+    if (debug)
+        syslog(LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode));
 
     retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
 
     if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval)));
+        if (debug)
+            syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
         return retval;
     }
     
-    retval = _yubi_run_helper_binary(otp_passcode, user);
+    retval = _yubi_run_helper_binary(otp_passcode, user, debug);
     if (retval == EXIT_SUCCESS)
         return PAM_SUCCESS;
     return PAM_AUTH_ERR;

@@ -30,17 +30,6 @@ AM_PROG_LIBTOOL
 AC_SUBST(PAMDIR, "/lib/security")
 AC_DEFINE_UNQUOTED([CHKPWD_HELPER], ["${sbindir}/yk_chkpwd"], [Location of yk_chkpwd])
 
-AC_ARG_ENABLE(debug,
-	[  --enable-debug           Enable debugging options (bugreports and developers only)],
-                 [ if test -n "$GCC"; then
-                     # get rid of default autofoo CFLAGS
-                     CFLAGS=`echo $CFLAGS | sed -e "s/-O2//" -e "s/-g//"`
-                     CFLAGS="$CFLAGS -g -O0 -DDEBUG"
-                 else
-                     CFLAGS="$CFLAGS -DDEBUG"
-                 fi
-               ],)
-
 AC_ARG_WITH(pam-dir,
 	AC_HELP_STRING([--with-pam-dir=DIR],
 			       [Where to install PAM module [[PREFIX/lib/security]]]

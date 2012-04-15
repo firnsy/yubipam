@@ -39,6 +39,7 @@ and ensure pam_yubikey.so is located in /lib/security/
 
 Supported PAM module parameters are:
 
+  "debug": enable debug.
   "verbose_otp": enable echoing of the OTP, after all it's only a one time pad.
 
 
