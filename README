@@ -93,17 +93,10 @@ NOT.
 -------------------------------------------------------------------------------
 
 In the event that the YubiPAM module is not working it may pay to enable debug
-mode in order to sort out any issues. To enable debug mode you must reconfigure
-the project with the --enable-debug option, for example:
+mode in order to sort out any issues. To enable debug mode just add the
+PAM module parameter "debug" to your PAM entry:
 
-# ./configure --enable-debug
-
-Move the newly generated pam_yubikey.so file to /lib/security, or on a 64-bit
-machine to /lib64/security. You'll also have to touch and give appropriate
-permissions to the debug output file using:
-
-# touch /var/run/pam-debug.log 
-# chmod go+w /var/run/pam-debug.log 
+  auth sufficient pam_yubikey.so debug
 
 Note: On production systems, debug should NOT be turned on due to its verbosity
 and subsequent disclosure of information. As a friendly reminder, the prompt

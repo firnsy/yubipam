@@ -32,16 +32,13 @@ $ automake --add-missing
 2. YubiPAM Configure-time switches
 -------------------------------------------------------------------------------
 
-`--enable-debug'
-    Enable debugging options (bugreports and developers only).
-     
 `--with-authdb=DIR'
 	Select the default authentication database (default: /etc/yubikey).
 
 `--with-pam-lib=DIR'
     Where to install the PAM library module (default: /lib/security)
     
-    
+
 -------------------------------------------------------------------------------
 3. Detailed Installation
 -------------------------------------------------------------------------------
