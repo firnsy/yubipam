@@ -73,9 +73,56 @@
     #define SELINUX_ENABLED 0
 #endif
 
-#define MAX_FD_NO 10000
+char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int verbose) {
+    struct pam_conv *conv;
+    int retval;
+    struct pam_message msg;
+    const struct pam_message *msgp;
+    struct pam_response *resp;
+    char *response;
+    char buffer[512];
 
-char *get_response(pam_handle_t *, const char *, const char *, int);
+    retval = pam_get_item(pamh, PAM_CONV, (const void**) &conv);
+    if (retval != PAM_SUCCESS) {
+        D((LOG_DEBUG, "get conv returned error: %s", pam_strerror (pamh, retval)));
+        return NULL;
+    }
+
+    /* check if we want verbose input */
+    if ( verbose != 0 )
+        msg.msg_style = PAM_PROMPT_ECHO_ON;
+    else
+        msg.msg_style = PAM_PROMPT_ECHO_OFF;
+
+    /* ensure user knows when debugging is turned on */
+#ifdef DEBUG
+    sprintf (buffer, "DEBUG MODE!!! %s (%s): ", prompt, user);
+#else
+    sprintf (buffer, "%s (%s): ", prompt, user);
+#endif
+
+    /* set up the conversation */
+    msg.msg = buffer;
+    msgp = &msg;
+    retval = (*conv->conv)(1, &msgp, &resp, conv->appdata_ptr);
+
+    if (resp == NULL) 
+        return NULL;
+
+    if (retval != PAM_SUCCESS) {
+        D((LOG_DEBUG, "conv returned error: %s", pam_strerror (pamh, retval)));
+        free(resp->resp);
+        free(resp);
+        return NULL;
+    }
+
+    D((LOG_DEBUG, "conv returned: %s", resp->resp));
+    response = resp->resp;
+	
+    free(resp);
+    return response;
+}
+
 
 PAM_EXTERN int
 pam_sm_authenticate (pam_handle_t *pamh,
@@ -149,55 +196,6 @@ pam_sm_close_session (pam_handle_t * pamh,
     return PAM_SUCCESS;
 }
 
-char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int verbose) {
-    struct pam_conv *conv;
-    int retval;
-    struct pam_message msg;
-    const struct pam_message *msgp;
-    struct pam_response *resp;
-    char *response;
-    char buffer[512];
-
-    retval = pam_get_item(pamh, PAM_CONV, (const void**) &conv);
-    if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "get conv returned error: %s", pam_strerror (pamh, retval)));
-        return NULL;
-    }
-
-    /* check if we want verbose input */
-    if ( verbose != 0 )
-        msg.msg_style = PAM_PROMPT_ECHO_ON;
-    else
-        msg.msg_style = PAM_PROMPT_ECHO_OFF;
-
-    /* ensure user knows when debugging is turned on */
-#ifdef DEBUG
-    sprintf (buffer, "DEBUG MODE!!! %s (%s): ", prompt, user);
-#else
-    sprintf (buffer, "%s (%s): ", prompt, user);
-#endif
-
-    /* set up the conversation */
-    msg.msg = buffer;
-    msgp = &msg;
-    retval = (*conv->conv)(1, &msgp, &resp, conv->appdata_ptr);
-
-    if (resp == NULL) 
-        return NULL;
-
-    if (retval != PAM_SUCCESS) {
-        D((LOG_DEBUG, "conv returned error: %s", pam_strerror (pamh, retval)));
-        free(resp->resp);
-        free(resp);
-        return NULL;
-    }
-
-    D((LOG_DEBUG, "conv returned: %s", resp->resp));
-    response = resp->resp;
-	
-    free(resp);
-    return response;
-}
 
 #ifdef PAM_STATIC
 struct pam_module _pam_yubikey_modstruct = {
@@ -210,5 +208,4 @@ struct pam_module _pam_yubikey_modstruct = {
     NULL
 };
 #endif
-
 
