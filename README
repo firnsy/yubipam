@@ -41,6 +41,12 @@ Supported PAM module parameters are:
 
   "debug": enable debug.
   "verbose_otp": enable echoing of the OTP, after all it's only a one time pad.
+  "include_users": enable yubikey auth for users in the given file. Eash line
+                   can contain one user.
+                   Ex: include_users=/etc/yubikey.users
+  "exclude_users": disable yubikey auth for users in the given file. Eash line
+                   can contain one user.
+                   Ex: exclude_users=/etc/yubikey.users
 
 
 -------------------------------------------------------------------------------

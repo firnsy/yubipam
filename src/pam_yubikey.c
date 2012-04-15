@@ -41,6 +41,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <errno.h>
 #include "libyubipam.h"
 
 /* Libtool defines PIC for shared objects */
@@ -74,6 +75,30 @@
     #define SELINUX_ENABLED 0
 #endif
 
+
+int user_in_usersfile(char *usersfile, const char *user, int debug) {
+    FILE* fp = fopen( usersfile, "r" );
+
+    if ( fp == NULL ) {
+        syslog(LOG_ERR, "unable to open usersfile: %s: %s", usersfile, strerror(errno));
+    } else {
+        char *c, line[64];
+        while (fgets(line, 64, fp)) {
+            c = index(line, '\n');
+            if( c ) *c = 0;
+            if(strcmp(line, user) == 0) {
+                if (debug)
+                    syslog(LOG_DEBUG, "user found");
+                return 1;
+            }
+        }
+        if (debug)
+            syslog(LOG_DEBUG, "user not found");
+    }
+
+    // User not found or error
+    return 0;
+}
 
 char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int verbose) {
     struct pam_conv *conv;
@@ -130,6 +155,8 @@ pam_sm_authenticate (pam_handle_t *pamh,
     int debug = 0;
     int verbose_otp = 0;
     int two_factor = 0;
+    char *include_users = NULL;
+    char *exclude_users = NULL;
 
     for (i=0; i<argc; i++) {
         if (strncmp(argv[i], "debug", 5) == 0)
@@ -138,6 +165,10 @@ pam_sm_authenticate (pam_handle_t *pamh,
             verbose_otp = 1;
         else if (strncmp(argv[i], "two_factor", 10) == 0)
             two_factor = 1;
+        else if (strncmp(argv[i], "include_users=", 14) == 0)
+            include_users = index(argv[i], '=') + 1;
+        else if (strncmp(argv[i], "exclude_users=", 14) == 0)
+            exclude_users = index(argv[i], '=') + 1;
         if (debug)
             syslog(LOG_DEBUG, "argv[%d]=%s", i, argv[i]);
     }
@@ -157,12 +188,24 @@ pam_sm_authenticate (pam_handle_t *pamh,
     if (debug)
         syslog(LOG_DEBUG, "get user returned: %s", user);
 
+    /* check for include_users and exclude_users */
+    if (include_users != NULL) {
+        if (!user_in_usersfile(include_users, user, debug)) {
+            return PAM_AUTH_ERR;
+        }
+    }
+    if (exclude_users != NULL) {
+        if (user_in_usersfile(exclude_users, user, debug)) {
+            return PAM_AUTH_ERR;
+        }
+    }
+
     /* prompt for the Yubikey OTP (always) */
     otp = get_response(pamh, "Yubikey OTP", user, verbose_otp);
 
     /* prompt for the second factor passcode as required */
     if (two_factor) {
-        passcode = get_response(pamh, "Yubikey Passcode", user, 0);
+        passcode = get_response(pamh, "Yubikey passcode", user, 0);
     }
 
     snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
