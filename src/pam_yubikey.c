@@ -164,7 +164,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-    D((LOG_DEBUG, "pass: %s (%d)", otp_passcode, strlen(otp_passcode)));
+    D((LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode)));
 
     retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
 
@@ -174,7 +174,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
     
     retval = _yubi_run_helper_binary(otp_passcode, user);
-    if (retval == 0)
+    if (retval == EXIT_SUCCESS)
         return PAM_SUCCESS;
     return PAM_AUTH_ERR;
 }

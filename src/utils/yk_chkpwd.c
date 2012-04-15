@@ -41,11 +41,6 @@
     #include "config.h"
 #endif
 
-#ifndef __linux__
-    #include <security/pam_appl.h>
-#endif
-#include <security/pam_modules.h>
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,7 +158,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
             strncpy(passcode, pch+1, passcode_len);
     } else {
         syslog(LOG_NOTICE, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
-        return PAM_CRED_INSUFFICIENT;
+        return EXIT_FAILURE;
     }
     
     D((LOG_DEBUG, "OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len));
@@ -174,7 +169,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* OTP needs the public UID for lookup */
     if (public_uid_bin_size <= 0) {
         D((LOG_DEBUG, "public_uid has no length, OTP is invalid"));
-        return PAM_CRED_INSUFFICIENT;
+        return EXIT_FAILURE;
     }
 
     /* set additional default values for the entry after parsing */
@@ -184,21 +179,21 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     handle = ykdbDatabaseOpen(CONFIG_AUTH_DB_DEFAULT);
     if (handle == NULL) {
         D((LOG_DEBUG, "couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT));
-        return PAM_AUTHINFO_UNAVAIL;
+        return EXIT_FAILURE;
     }
     
     /* seek to public UID if it exists */
     if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
         D((LOG_DEBUG, "no entry for user (with that token): %s", user));
-        return PAM_USER_UNKNOWN;
+        return EXIT_FAILURE;
     }
 
     /* grab the entry */
     if ( ykdbEntryGet(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
 
-        return PAM_AUTHINFO_UNAVAIL;
+        return EXIT_FAILURE;
     }
      
     /* start building decryption entry as required */
@@ -240,7 +235,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
         ykdbDatabaseClose(handle);
         D((LOG_DEBUG, "crc invalid: 0x%04x", crc));
 
-        return PAM_AUTH_ERR;
+        return EXIT_FAILURE;
     }
 
     /* hash decrypted private uid */
@@ -250,7 +245,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     if ( memcmp(&tkt_private_uid_hash, &entry.ticket.private_uid_hash, 32) ) {
         ykdbDatabaseClose(handle);
         D((LOG_DEBUG, "private uid mismatch"));
-        return PAM_AUTH_ERR;
+        return EXIT_FAILURE;
     }
 
     /* check counter deltas */
@@ -260,13 +255,13 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     if ( delta_session < 0 ) {
         ykdbDatabaseClose(handle);
         D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session));
-        return PAM_AUTH_ERR;
+        return EXIT_FAILURE;
     }
     
     if ( delta_session == 0 && delta_button <= 0 ) {
         ykdbDatabaseClose(handle);
         D((LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button));
-        return PAM_AUTH_ERR;
+        return EXIT_FAILURE;
     }
     
     /* update the database entry with the latest counters */
@@ -284,10 +279,10 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode) {
     /* re-encrypt and write to database */
     if ( ykdbEntryWrite(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
-        return PAM_AUTHINFO_UNAVAIL;
+        return EXIT_FAILURE;
     }
 
-    return PAM_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
 
@@ -296,7 +291,7 @@ int main(int argc, char *argv[]) {
     char pass[MAXPASS + 1];
     int npass;
     int force_failure = 0;
-    int retval = PAM_AUTH_ERR;
+    int retval = EXIT_FAILURE;
     char *user;
 
     /*
@@ -315,13 +310,13 @@ int main(int argc, char *argv[]) {
 
     if (isatty(STDIN_FILENO) || argc != 2 ) {
         syslog(LOG_NOTICE
-              ,"inappropriate use of Unix helper binary [UID=%d]"
-             ,getuid());
+            ,"inappropriate use of Unix helper binary [UID=%d]"
+            ,getuid());
         fprintf(stderr
-         ,"This binary is not designed for running in this way\n"
-              "-- the system administrator has been informed\n");
+            ,"This binary is not designed for running in this way\n"
+             "-- the system administrator has been informed\n");
         sleep(10);    /* this should discourage/annoy the user */
-        return PAM_SYSTEM_ERR;
+        return EXIT_FAILURE;
     }
     
     /*
@@ -338,15 +333,15 @@ int main(int argc, char *argv[]) {
          matches it */
         if (strcmp(user, argv[1])) {
             syslog(LOG_NOTICE
-              ,"mismatch of %s|%s", user, argv[1]);
-            return PAM_AUTH_ERR;
+                ,"mismatch of %s|%s", user, argv[1]);
+            return EXIT_FAILURE;
         }
     }
 
     /* read the OTP/passcode from stdin (a pipe from the pam_yubikey module) */
     npass = read(STDIN_FILENO, pass, MAXPASS);
 
-    if (npass < 0) {       /* is it a valid OTP/passcode? */
+    if (npass < 0) {    /* is it a valid OTP/passcode? */
         syslog(LOG_DEBUG, "no OTP/passcode supplied");
     } else if (npass >= MAXPASS) {
         syslog(LOG_DEBUG, "OTP/passcode too long");
@@ -358,9 +353,9 @@ int main(int argc, char *argv[]) {
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
 
     /* return pass or fail */
-    if ((retval != PAM_SUCCESS) || force_failure) {
+    if ((retval != EXIT_SUCCESS) || force_failure) {
         syslog(LOG_NOTICE, "OTP/passcode check failed for user (%s)", user);
-        return PAM_AUTH_ERR;
+        return EXIT_FAILURE;
     }
     
     return retval;

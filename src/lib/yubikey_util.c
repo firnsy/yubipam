@@ -1118,7 +1118,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
     // create a pipe for the OTP/passcode
     if (pipe(fds) != 0) {
         D((LOG_DEBUG, "could not make pipe"));
-        return -1;
+        return EXIT_FAILURE;
     }
 
     sighandler = signal(SIGCHLD, SIG_DFL);
@@ -1168,14 +1168,14 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
             if ( write(fds[1], otp_passcode, strlen(otp_passcode)+1) == -1 ) {
                 D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
                 close(fds[1]);
-                retval = -1;
+                retval = EXIT_FAILURE;
             }
             otp_passcode = NULL;
         } else {
             if ( write(fds[1], "", 1) == -1 ) { /* blank OTP/passcode */
                 D((LOG_DEBUG, "cannot send OTP/passcode to helper"));
                 close(fds[1]);
-                retval = -1;
+                retval = EXIT_FAILURE;
             }
         }
 
@@ -1186,7 +1186,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
 
         if (rc < 0) {
             syslog(LOG_ERR, "%s: yk_chkpwd waitpid returned %d: %m", __FUNCTION__, rc);
-            retval = -1;
+            retval = EXIT_FAILURE;
         } else {
             retval = WEXITSTATUS(retval);
         }
@@ -1194,7 +1194,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user) {
         D((LOG_DEBUG, "fork failed"));
         close(fds[0]);
         close(fds[1]);
-        retval = -1;
+        retval = EXIT_FAILURE;
     }
 
     if (sighandler != SIG_ERR) {
