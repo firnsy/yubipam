@@ -41,7 +41,7 @@ uint32_t entry_idx;
 
 int mode;
 ykdb_entry entry;
-ykdb_h *handle;
+ykdb_h *handle = NULL;
 yk_ticket tkt;
 char dbname[512] = CONFIG_AUTH_DB_DEFAULT;
 
@@ -133,6 +133,8 @@ int main (int argc, char *argv[]) {
     progname = argv[0];
 
     /* set default values for the entry */
+    *entry.user_hash = 0;
+    *entry.public_uid_hash = 0;
     entry.flags = YKDB_TOKEN_ENC_PUBLIC_UID;
     entry.ticket.last_session = 0x0000;
     entry.ticket.last_timestamp_lo = 0x0000;
@@ -166,6 +168,7 @@ int main (int argc, char *argv[]) {
 
     if ( entry_count == 0 ) {
         printf("The database is empty.\n");
+        free(handle);
         exit(EXIT_SUCCESS);
     }
 
@@ -246,12 +249,14 @@ int main (int argc, char *argv[]) {
         showVersion("ykdump - Yubikey Database Dumping Utility");
     } else {
         showUsage(progname);
+        free(handle);
         exit(EXIT_FAILURE);
     }
 
     /* close the db */
     ykdbDatabaseClose(handle);
 
+    free(handle);
     exit(EXIT_SUCCESS);
     return 0;
 }

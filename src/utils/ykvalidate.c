@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
     if (mode & MODE_VALIDATE) {
         if ( NULL == user ) {
             /* get passwd structure for current user */
-            pw = getPWEnt();
+            pw = getpwuid(getuid());
  
             if ( NULL == pw ) {
                 fprintf(stderr, "Can't determine your user name!\n");
@@ -150,6 +150,8 @@ int main(int argc, char *argv[]) {
         }
 
         snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+        free(passcode);
+
         ret = _yubi_run_helper_binary(otp_passcode, user, debug);
 
         printf("%s: ", user);

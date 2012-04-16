@@ -1095,17 +1095,6 @@ char *getInput(const char *prompt, int size, int required, uint8_t flags) {
     return answer;
 }
 
-struct passwd *getPWEnt(void) {
-    struct passwd *pw;
-    const char *cp = getlogin();
-    uid_t ruid = getuid();
-
-    if (cp && *cp && (pw = getpwnam(cp)) && pw->pw_uid == ruid)
-        return pw;
-
-    return getpwuid(ruid);
-}
-
 // verify the OTP/passcode of a user
 int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debug) {
     int retval;

@@ -544,6 +544,9 @@ int ykdbEntrySeekOnUserHash(ykdb_h *handle, uint8_t *user_hash, uint8_t flags) {
     ykdb_entry entry;
     int ret;
 
+    /* initialize used entry objects */
+    *entry.user_hash = 0;
+
     /* check argument sanity */
     if (handle == NULL || user_hash == NULL) {
         YKDB_ERROR_RET(YKDB_ERR_ARGS);
@@ -594,6 +597,9 @@ int ykdbEntrySeekOnPublicHash(ykdb_h *handle, uint8_t *public_uid_hash, uint8_t 
     off_t old_pos = 0;
     ykdb_entry entry;
     int ret;
+
+    /* initialize used entry objects */
+    *entry.public_uid_hash = 0;
 
     /* check argument sanity */
     if (handle == NULL || public_uid_hash == NULL) {

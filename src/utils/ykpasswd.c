@@ -62,6 +62,7 @@ extern uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size);
 
 void clean(void) {
     /* free any and all allocated memory */
+    free(handle);
     free(otp);
     free(user_text);
     free(public_uid_text);
@@ -436,7 +437,7 @@ int main (int argc, char *argv[]) {
     /* if no user specified use calling user */
     if (NULL == user_text) {
         /* get passwd structure for current user */
-        pw = getPWEnt();
+        pw = getpwuid(getuid());
 
         if (NULL == pw) {
             fprintf(stderr, "Can't determine your user name\n");

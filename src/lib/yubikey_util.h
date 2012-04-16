@@ -47,7 +47,6 @@ int safeSnprintf(char *buf, size_t buf_size, const char *format, ...);
 int safeSnprintfAppend(char *buf, size_t buf_size, const char *format, ...);
 int safeStrnlen(const char *buf, int buf_size);
 char *getInput(const char *prompt, int size, int required, uint8_t flags);
-struct passwd *getPWEnt(void);
 int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debug);
 int checkHexString(const uint8_t *);
 int checkModHexString(const uint8_t *);
