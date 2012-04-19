@@ -1,5 +1,4 @@
-2012-04-13 - pam-yubikey 1.2
-  [*] Changed fork version 1.1-beta1 to version 1.2
+2012-04-13 - YubiPAM 1.0.5
   [*] Improvements
       * Made valgrind happy. Fixed some memory leaks
       * Added PAM option debug and removed configure debug option

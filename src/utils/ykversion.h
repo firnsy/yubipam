@@ -25,9 +25,9 @@
 #define __YK_VERSION_H__
 
 #define VER_MAJOR "1"
-#define VER_MINOR "2"
-#define VER_REVISION "0"
-#define VER_BUILD "102"
+#define VER_MINOR "0"
+#define VER_REVISION "5"
+#define VER_BUILD "105"
 
 void showVersion(const char *title);
 

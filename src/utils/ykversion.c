@@ -26,9 +26,9 @@ void showVersion(const char *title) {
     fprintf(stderr, "\n"
         "%s\n"
         "Version %s.%s.%s (Build %s)\n\n"
-        "Originally written by the SecurixLive team,\n"
-        "Current maintainer Jeroen Nijhof <jeroen@jeroennijhof.nl>,\n"
-        "Project page http://sourceforge.net/projects/pam-yubikey\n"
+        "Written by Ian Firns <firnsy@securixlive.com>,\n"
+        "co-developer Jeroen Nijhof <jeroen@jeroennijhof.nl>,\n"
+        "project page https://github.com/firnsy/yubipam\n"
         "\n", title, VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD);
 }
 
