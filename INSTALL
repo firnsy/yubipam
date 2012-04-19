@@ -9,6 +9,12 @@ short version.
 The quick install notes for getting people up and running in with minimal fuss
 are below. Detailed instructions will follow later.
 
+If there is no ./configure create one with autotools:
+$ aclocal
+$ autoconf 
+$ autoheader 
+$ automake --add-missing
+
 1.   *** Make sure you have PAM library HEADERS installed!!! ***
 2.   ./configure
 3.   make
@@ -26,16 +32,13 @@ are below. Detailed instructions will follow later.
 2. YubiPAM Configure-time switches
 -------------------------------------------------------------------------------
 
-`--enable-debug'
-    Enable debugging options (bugreports and developers only).
-     
 `--with-authdb=DIR'
 	Select the default authentication database (default: /etc/yubikey).
 
 `--with-pam-lib=DIR'
     Where to install the PAM library module (default: /lib/security)
     
-    
+
 -------------------------------------------------------------------------------
 3. Detailed Installation
 -------------------------------------------------------------------------------
@@ -57,8 +60,8 @@ instructions to the address given in the 'README' so they can be considered for
 the next release. If at some point 'config.cache' contains results you don't
 want to keep, you may remove or edit it.
 
-The file 'configure.in' is used to create 'configure' by a program called 
-'autoconf'. You only need `configure.in' if you want to change it or regenerate
+The file 'configure.ac' is used to create 'configure' by a program called 
+'autoconf'. You only need `configure.ac' if you want to change it or regenerate
 'configure' using a newer version of 'autoconf'. 
 
 The simplest way to compile this package is:

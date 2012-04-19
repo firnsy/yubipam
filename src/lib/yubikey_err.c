@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Error API
 *
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -27,46 +28,40 @@
 #include "yubikey_err.h"
 
 char *errstr = NULL;
-int yubikey_errno;
+int yubikey_errno = 0;
 
 char *errno_strings[] = {
-	"Unknown error",
-	"I/O Error",
-	"Locking error",
-	"Invalid authentication database",
-	"Authentication database contains no entries",
-	"Entry seek error",
-	"Invalid argument to function"
+    "Unknown error",
+    "I/O Error",
+    "Locking error",
+    "Invalid authentication database",
+    "Authentication database contains no entries",
+    "Entry seek error",
+    "Invalid argument to function"
 };
 		
-
 /* public API implementation */
-char *yubikey_error_string( void ) 
-{
+char *yubikey_error_string(void) {
+    char *ret = NULL;
 	
-	char *ret;
+    /* Some checks */
+    if (yubikey_errno > YK_ERR_NUM) 
+        return NULL;
 	
-	/* Some checks */
-	if (yubikey_errno > YK_ERR_NUM) 
-		return NULL;
-	
-	/* allocate and format the return string */
-	if (errstr)
-	{ 
-		ret = (char*) malloc( (size_t) strlen(errno_strings[yubikey_errno-1]) + strlen(errstr) + 2 );
-		sprintf( ret, "%s:%s", errno_strings[yubikey_errno-1], errstr );
-	} 
-	else
-	{
-		ret = strdup( errno_strings[yubikey_errno-1] );
-	}
+    /* allocate and format the return string */
+    if (errstr) {
+        ret = (char*) malloc( (size_t) strlen(errno_strings[yubikey_errno-1]) + strlen(errstr) + 2 );
+        sprintf( ret, "%s:%s", errno_strings[yubikey_errno-1], errstr );
+    } else {
+        ret = strdup( errno_strings[yubikey_errno-1] );
+    }
 
-	/* free the error string */
-	if (errstr != NULL)
-		free( errstr );
+    /* free the error string */
+    if (errstr != NULL)
+        free( errstr );
 
-	errstr = NULL;
+    errstr = NULL;
 
-	/* return */
-	return ret;
+    /* return */
+    return ret;
 }

@@ -1,8 +1,9 @@
 /*
 * YubiKey PAM Database Dumping Utility
 *
-* Copyright (C) 2008-2010 Ian Firns		firnsy@securixlive.com
-* Copyright (C) 2008-2010 SecurixLive	dev@securixlive.com
+* Copyright (C) 2012 Jeroen Nijhof <jeroen@jeroennijhof.nl>
+* Copyright (C) 2008-2010 Ian Firns <firnsy@securixlive.com>
+* Copyright (C) 2008-2010 SecurixLive <dev@securixlive.com>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -25,11 +26,11 @@
 
 #include "ykversion.h"
 
-#define MODE_VERSION		1
-#define MODE_USAGE			2
-#define MODE_SEARCH_USER  	8
-#define MODE_SEARCH_PUBLIC	16
-#define MODE_SEARCH_INDEX 	32
-#define MODE_DUMP_ALL       128
+#define MODE_VERSION 1
+#define MODE_USAGE 2
+#define MODE_SEARCH_USER 8
+#define MODE_SEARCH_PUBLIC 16
+#define MODE_SEARCH_INDEX 32
+#define MODE_DUMP_ALL 128
 
 #endif /* __YK_DUMP_H__*/ 
