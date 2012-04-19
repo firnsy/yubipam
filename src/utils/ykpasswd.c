@@ -455,6 +455,8 @@ int main (int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     } else if (mode == MODE_VERSION) {
         showVersion("ykpasswd - Yubikey OTP/Passcode Utility");
+        clean();
+        exit(EXIT_SUCCESS);
     }
 
     /* set additional default values for the entry after parsing */
