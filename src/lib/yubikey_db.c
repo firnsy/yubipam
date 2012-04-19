@@ -262,9 +262,6 @@ int ykdbDatabaseClose(ykdb_h *handle) {
         YKDB_ERROR_RET(YKDB_ERR_IO);
     }
 
-    /* free handle */
-    free(handle);
-
     return YKDB_SUCCESS;
 }
 

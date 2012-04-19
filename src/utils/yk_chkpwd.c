@@ -192,13 +192,14 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         ykdbDatabaseClose(handle);
         if (debug)
             syslog(LOG_DEBUG, "no entry for user (with that token): %s", user);
+        free(handle);
         return EXIT_FAILURE;
     }
 
     /* grab the entry */
     if ( ykdbEntryGet(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
-
+        free(handle);
         return EXIT_FAILURE;
     }
      
@@ -242,7 +243,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         ykdbDatabaseClose(handle);
         if (debug)
             syslog(LOG_DEBUG, "crc invalid: 0x%04x", crc);
-
+        free(handle);
         return EXIT_FAILURE;
     }
 
@@ -254,6 +255,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         ykdbDatabaseClose(handle);
         if (debug)
             syslog(LOG_DEBUG, "private uid mismatch");
+        free(handle);
         return EXIT_FAILURE;
     }
 
@@ -265,6 +267,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         ykdbDatabaseClose(handle);
         if (debug)
             syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session);
+        free(handle);
         return EXIT_FAILURE;
     }
     
@@ -272,6 +275,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         ykdbDatabaseClose(handle);
         if (debug)
             syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button);
+        free(handle);
         return EXIT_FAILURE;
     }
     
@@ -290,9 +294,11 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     /* re-encrypt and write to database */
     if ( ykdbEntryWrite(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
+        free(handle);
         return EXIT_FAILURE;
     }
 
+    free(handle);
     return EXIT_SUCCESS;
 }
 
@@ -312,26 +318,6 @@ int main(int argc, char *argv[]) {
      */
     setup_signals();
 
-    /*
-     * we establish that this program is running with non-tty stdin.
-     * this is to discourage casual use. It does *NOT* prevent an
-     * intruder from repeatadly running this program to determine the
-     * OTP/passcode of the current user (brute force attack, but one for
-     * which the attacker must already have gained access to the user's
-     * account).
-     */
-
-    if (isatty(STDIN_FILENO) || argc < 2 ) {
-        syslog(LOG_AUTH
-            ,"inappropriate use of Unix helper binary [UID=%d]"
-            ,getuid());
-        fprintf(stderr
-            ,"This binary is not designed for running in this way\n"
-             "-- the system administrator has been informed\n");
-        sleep(10);    /* this should discourage/annoy the user */
-        return EXIT_FAILURE;
-    }
-    
     /* loop through each command line var and process it */
     while((ch = getopt(argc, argv, "d")) != -1) {
         switch(ch) {
@@ -348,6 +334,25 @@ int main(int argc, char *argv[]) {
     }
 
     /*
+     * we establish that this program is running with non-tty stdin.
+     * this is to discourage casual use. It does *NOT* prevent an
+     * intruder from repeatadly running this program to determine the
+     * OTP/passcode of the current user (brute force attack, but one for
+     * which the attacker must already have gained access to the user's
+     * account).
+     */
+    if (isatty(STDIN_FILENO) || user == NULL ) {
+        syslog(LOG_AUTH
+            ,"inappropriate use of Unix helper binary [UID=%d]"
+            ,getuid());
+        fprintf(stderr
+            ,"This binary is not designed for running in this way\n"
+             "-- the system administrator has been informed\n");
+        sleep(10);    // this should discourage/annoy the user
+        return EXIT_FAILURE;
+    }
+
+    /*
      * Determine what the current user's name is.
      * On a SELinux enabled system with a strict policy leaving the
      * existing check prevents shadow password authentication from working.
@@ -358,7 +363,8 @@ int main(int argc, char *argv[]) {
          matches it */
         if (strcmp(user, getuidname(getuid()))) {
             syslog(LOG_AUTH
-                ,"mismatch of %s|%s", user, argv[1]);
+                ,"mismatch of %s|%s", user, getuidname(getuid()));
+            free(user);
             return EXIT_FAILURE;
         }
     }
@@ -380,9 +386,11 @@ int main(int argc, char *argv[]) {
     /* return pass or fail */
     if ((retval != EXIT_SUCCESS) || force_failure) {
         syslog(LOG_AUTH, "OTP/passcode check failed for user (%s)", user);
+        free(user);
         return EXIT_FAILURE;
     }
     
+    free(user);
     return retval;
 }
 

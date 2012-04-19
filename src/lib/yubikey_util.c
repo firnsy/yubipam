@@ -1041,14 +1041,17 @@ int _getline(char *buf, size_t buf_size) {
     int i;
     int c = 0;
 
-    for (i = 0; i < buf_size -1 && (c = getc(stdin)) != EOF && c != '\n'; ++i)
-        buf[i]= c;
-
-    if (c == '\n') {
+    for (i = 0; i < buf_size && (c = getc(stdin)) != EOF && c != '\n'; ++i)
         buf[i] = c;
-        i++;
-    }
     buf[i] = '\0';
+
+    // if buf_size is reach flush stdin
+    while (c != EOF && c != '\n') {
+        c = getc(stdin);
+        if (c == '\n')
+            --i;
+        ++i;
+    }
 
     return i;
 }
@@ -1073,12 +1076,12 @@ char *getInput(const char *prompt, int size, int required, uint8_t flags) {
     if ( tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0 )
         return NULL;
 
-    while ( (bytes_read-1) != required ) {
+    while ( (bytes_read) != required ) {
         fprintf(stdout, "%s", prompt);
         answer = malloc(size + 1);
         bytes_read = _getline(answer, gl_size);
 
-        if ( (required <= 0) || (NULL == answer) )
+        if ( (required == -1) || (NULL == answer) )
             break;
     }
 

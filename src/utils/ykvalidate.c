@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
         }
 
         if ( mode & MODE_PASSCODE ) {
-            passcode = getInput("Yubikey passcode: ", 64, 0, GETLINE_FLAGS_ECHO_OFF);
+            passcode = getInput("Yubikey passcode: ", 64, -1, GETLINE_FLAGS_ECHO_OFF);
         }
 
         snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
