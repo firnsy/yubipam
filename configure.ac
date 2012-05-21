@@ -20,6 +20,11 @@ AC_CONFIG_SRCDIR([src/pam_yubikey.c])
 AC_CONFIG_HEADER([config.h])
 
 dnl --------------------------------------------------------------------
+dnl Default prefix
+test "x${prefix}" = "xNONE" && prefix="/usr/local"
+test "x${exec_prefix}" = "xNONE" && exec_prefix="${prefix}"
+
+dnl --------------------------------------------------------------------
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
@@ -28,7 +33,10 @@ AC_PROG_MAKE_SET
 AM_PROG_LIBTOOL
 
 AC_SUBST(PAMDIR, "/lib/security")
-AC_DEFINE_UNQUOTED([CHKPWD_HELPER], ["${sbindir}/yk_chkpwd"], [Location of yk_chkpwd])
+
+yk_chkpwd="${sbindir}/yk_chkpwd"
+test "x${sbindir}" = "x\${exec_prefix}/sbin" && yk_chkpwd="${exec_prefix}/sbin/yk_chkpwd"
+AC_DEFINE_UNQUOTED([CHKPWD_HELPER], ["${yk_chkpwd}"], [Location of yk_chkpwd])
 
 AC_ARG_WITH(pam-dir,
 	AC_HELP_STRING([--with-pam-dir=DIR],
