@@ -1,5 +1,14 @@
-2012-04-13 - YubiPAM 1.0.5
+2012-04-13 - YubiPAM 1.1.0
   [*] Improvements
+      * ykpasswd. Fixed the delete function. Added option u for user and
+        made it mandatory. Removed the pointless update function.
+      * yk_chkpwd. Detect if a second factor passcode is needed.
+      * ykvalidate. Removed c option because it will detect if a second
+        factor passcode is needed.
+      * PAM. Removed option two_factor because it will detect if a second
+        factor passcode is needed and ask for it. Added option passcode_only
+        which will put the passcode in PAM AUTHTOK instead of the OTP and
+        passcode
       * Made valgrind happy. Fixed some memory leaks
       * Added PAM option debug and removed configure debug option
       * Fixed getopt options and using getopt short only

@@ -15,15 +15,16 @@ GNU/Linux, Solaris and Mac OS X for user authentication.
   1. Manual add/delete from database. Using the ykpasswd tool you can add
      delete yubikey entries from the database (default: /etc/yubikey).
 
-  2. Per user accounting. Supports individual user account authorisation. This
-	 is currently limited to one Yubikey dongle per user account.
+  2. Per user accounting. Supports individual user account authorisation.
+     Every user may have multiple Yubikey dongles only make sure you are using
+     different public UID's on every Yubikey dongle.
 
-  3. Single factor sign in. Currently only single factor (ie. Yubikey OTP) is
-	 currently supported. There will be an additional second factor password
-	 option added in the near future.
+  3. Single and second factor sign in. Next to single factor ie. Yubikey OTP
+     you can define an additional passcode. The pam module will detect if the
+     second factor passcode is needed.
 		
   4. Static heuristic support. Heuristic support for OTP data deltas is hard
-	 coded. This will be changable in the next release.
+     coded. This will be changable in the next release.
 
 
 -------------------------------------------------------------------------------
@@ -47,7 +48,9 @@ Supported PAM module parameters are:
   "exclude_users": disable yubikey auth for users in the given file. Eash line
                    can contain one user.
                    Ex: exclude_users=/etc/yubikey.users
-
+  "passcode_only": instead of the OTP, pam authtok will only contain the
+                   passcode. This can be very handy when you are using other
+                   pam modules like pam_ecryptfs.
 
 -------------------------------------------------------------------------------
 4. Utilities
@@ -64,22 +67,20 @@ after successful decryption of a valid OTP.
 If you have apriori knowledge of these values for user joesmith you can enter
 them straight into the command line, using:
 
-# ykpasswd -a -k AESKEY -f PUBLICKEY -p PRIVATEKEY joesmith
+# ykpasswd -a -k AESKEY -f PUBLICKEY -p PRIVATEKEY -u joesmith
 
 Or alteratnively you can just enter the minimum and be prompted to enter the 
 information using:
 
-# ykpasswd -a joesmith
+# ykpasswd -a -u joesmith
 
 If you don't have the private UID it requires you to decrypt a valid token to
 get the value. Fortunately you can provide a valid OTP and the appropriate AES
-key and let ykpassword determine the public and private UIDs for you, using:
+key and let ykpasswd determine the public and private UIDs for you, using:
 
 # ykpasswd -a -u joesmith -k AESKEY -o OTP
 
-The "-u" option is an alternative to placing the user name at the end of the
-utility which can be cumbersome if you use the Yubikey to generate an OTP and
-a carriage return is applied too early :)
+The "-u" option is mandatory and should always be defined.
 
 
 ykvalidate
@@ -105,8 +106,5 @@ PAM module parameter "debug" to your PAM entry:
   auth sufficient pam_yubikey.so debug
 
 Note: On production systems, debug should NOT be turned on due to its verbosity
-and subsequent disclosure of information. As a friendly reminder, the prompt
-will indicate that you are in debug mode by indicating "DEBUG MODE!!!". Once 
-you've successfully debugged your system reconfigure without the --enable-debug
-option and rebuild.
+and subsequent disclosure of information.
 

@@ -154,21 +154,21 @@ pam_sm_authenticate (pam_handle_t *pamh,
     int i = 0;
     int debug = 0;
     int verbose_otp = 0;
-    int two_factor = 0;
     char *include_users = NULL;
     char *exclude_users = NULL;
+    int passcode_only = 0;
 
     for (i=0; i<argc; i++) {
         if (strncmp(argv[i], "debug", 5) == 0)
             debug = 1;
         else if (strncmp(argv[i], "verbose_otp", 11) == 0)
             verbose_otp = 1;
-        else if (strncmp(argv[i], "two_factor", 10) == 0)
-            two_factor = 1;
         else if (strncmp(argv[i], "include_users=", 14) == 0)
             include_users = index(argv[i], '=') + 1;
         else if (strncmp(argv[i], "exclude_users=", 14) == 0)
             exclude_users = index(argv[i], '=') + 1;
+        else if (strncmp(argv[i], "passcode_only", 13) == 0)
+            passcode_only = 1;
         if (debug)
             syslog(LOG_DEBUG, "argv[%d]=%s", i, argv[i]);
     }
@@ -203,26 +203,37 @@ pam_sm_authenticate (pam_handle_t *pamh,
     /* prompt for the Yubikey OTP (always) */
     otp = get_response(pamh, "Yubikey OTP", user, verbose_otp);
 
-    /* prompt for the second factor passcode as required */
-    if (two_factor) {
-        passcode = get_response(pamh, "Yubikey passcode", user, 0);
-    }
-
-    snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+    snprintf(otp_passcode, 128, "%s|", otp ? otp:"");
     if (debug)
         syslog(LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode));
 
-    retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
+    retval = _yubi_run_helper_binary(otp_passcode, user, debug);
 
-    if (retval != PAM_SUCCESS) {
+    if (retval == 128) {
+        /* need passcode */
+        passcode = get_response(pamh, "Yubikey passcode", user, 0);
+
+        snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
         if (debug)
-            syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
-        return retval;
+            syslog(LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode));
+
+        retval = _yubi_run_helper_binary(otp_passcode, user, debug);
+    }
+
+    if (retval == EXIT_SUCCESS) {
+        if ((passcode_only != 0) && (passcode != NULL)) {
+            retval = pam_set_item(pamh, PAM_AUTHTOK, passcode);
+        } else {
+            retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
+        }
+        if (retval != PAM_SUCCESS) {
+            if (debug)
+                syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
+            return retval;
+        }
+        return PAM_SUCCESS;
     }
     
-    retval = _yubi_run_helper_binary(otp_passcode, user, debug);
-    if (retval == EXIT_SUCCESS)
-        return PAM_SUCCESS;
     return PAM_AUTH_ERR;
 }
 

@@ -41,14 +41,13 @@ int mode;
 char *user = NULL;
 char *otp = NULL;
 
-static char *valid_options = "hu:cdV";
+static char *valid_options = "hu:dV";
 
 void showUsage(char *program_name) {
     fprintf(stdout, "USAGE: %s [OPTION]... OTP\n", program_name);
     fprintf(stdout, "\n");
     fprintf(stdout, "   -h          Show this information\n");
     fprintf(stdout, "   -u <user>   Apply configuration to <user>\n");
-    fprintf(stdout, "   -c          Prompt for second factor pass code\n");
     fprintf(stdout, "   -d          Log debug info to syslog\n");
     fprintf(stdout, "   -V          Show version and exit\n");
     fprintf(stdout, "\n");
@@ -71,10 +70,6 @@ void parseCommandLine(int argc, char *argv[]) {
         switch(ch) {
             case 'u': /* Explicitly defined user */
                 user = strdup(optarg);
-                break;
-
-            case 'c': /* prompt for passcode */
-                mode |= MODE_PASSCODE;
                 break;
 
             case 'h': /* show help and exit with 1 */
@@ -145,14 +140,16 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        if ( mode & MODE_PASSCODE ) {
-            passcode = getInput("Yubikey passcode: ", 64, -1, GETLINE_FLAGS_ECHO_OFF);
-        }
-
-        snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-        free(passcode);
-
+        snprintf(otp_passcode, 128, "%s|", otp ? otp:"");
         ret = _yubi_run_helper_binary(otp_passcode, user, debug);
+
+        if (ret == 128) {
+            /* Need passcode */
+            passcode = getInput("Yubikey passcode: ", 64, -1, GETLINE_FLAGS_ECHO_OFF);
+            snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+            ret = _yubi_run_helper_binary(otp_passcode, user, debug);
+        }
+        free(passcode);
 
         printf("%s: ", user);
 

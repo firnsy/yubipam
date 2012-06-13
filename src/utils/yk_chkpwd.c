@@ -214,8 +214,15 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     }
     
     /* add passcode as appropriate */
-    if ( (entry.flags & YKDB_TOKEN_ENC_PASSCODE) || passcode_len > 0 ) {
-        safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode);
+    if ( (entry.flags & YKDB_TOKEN_ENC_PASSCODE) ) {
+        if (passcode_len > 0) {
+            safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode);
+        } else {
+            /* passcode needed but not given */
+            ykdbDatabaseClose(handle);
+            free(handle);
+            return 128;
+        }
     }
 
     /* close off decryption key text and generate encryption hash */
@@ -307,7 +314,6 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
 int main(int argc, char *argv[]) {
     char pass[MAXPASS + 1];
     int npass;
-    int force_failure = 0;
     int retval = EXIT_FAILURE;
     int debug = 0;
     int ch;
@@ -384,7 +390,7 @@ int main(int argc, char *argv[]) {
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
 
     /* return pass or fail */
-    if ((retval != EXIT_SUCCESS) || force_failure) {
+    if ((retval != EXIT_SUCCESS) && (retval != 128)) {
         syslog(LOG_AUTH, "OTP/passcode check failed for user (%s)", user);
         free(user);
         return EXIT_FAILURE;

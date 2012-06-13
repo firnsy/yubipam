@@ -13,7 +13,7 @@ AC_PREREQ(2.59)
 AC_COPYRIGHT([
 See the included file: COPYING for copyright information.
 ])
-AC_INIT(src/pam_yubikey.c, 1.0.5, [firnsy@securixlive.com,jeroen@jeroennijhof.nl])
+AC_INIT(src/pam_yubikey.c, 1.1.0, [firnsy@securixlive.com,jeroen@jeroennijhof.nl])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/pam_yubikey.c])

@@ -71,12 +71,13 @@ void clean(void) {
     free(passcode_text);
 }
 
-static char *valid_options = "hadD:cf:k:o:p:V";
+static char *valid_options = "hu:adD:cf:k:o:p:V";
 
 int showUsage(char *program_name) {
-    fprintf(stdout, "USAGE: %s [OPTION]... USER\n", program_name);
+    fprintf(stdout, "USAGE: %s [OPTION]...\n", program_name);
     fprintf(stdout, "\n");
     fprintf(stdout, "   -h          Show this information\n");
+    fprintf(stdout, "   -u          User (mandatory option)\n");
     fprintf(stdout, "   -a          Add yubikey to database\n");
     fprintf(stdout, "   -d          Delete yubikey from database\n");
     fprintf(stdout, "   -D <path>   Explicitly define the database <path>\n");
@@ -95,7 +96,7 @@ void parseCommandLine(int argc, char *argv[]) {
     int ch;                         /* storage var for getopt info */
 
     /* just to be sane.. */
-    mode = MODE_UPDATE;
+    mode = MODE_ADD;
 
     /* loop through each command line var and process it */
     while((ch = getopt(argc, argv, valid_options)) != -1) {
@@ -123,11 +124,15 @@ void parseCommandLine(int argc, char *argv[]) {
                 mode = MODE_ADD;
                 break;
 
+            case 'u': /* user */
+                user_text = strdup(optarg);
+                break;
+
             case 'c': /* prompt for additional passcode (2nd factor */
                 entry.flags |= YKDB_TOKEN_ENC_PASSCODE;
                 break;
 
-            case 'd': /* delete yubikey entry to the database */
+            case 'd': /* delete yubikey entry from the database */
                 mode = MODE_DELETE;
                 break;
             
@@ -147,15 +152,6 @@ void parseCommandLine(int argc, char *argv[]) {
                 private_uid_text = strdup(optarg);
                 break;
         }   
-    }
-    
-    /* there may be some left over arguments */
-    if (optind < argc) {
-        /* an explicit declaration overrides this */
-        if (user_text == NULL) {
-            /* grab the first additional argument as the user name */
-            user_text = strdup(argv[optind]);
-        }
     }
 }
 
@@ -322,47 +318,6 @@ int addYubikeyEntry(void) {
     return 0;
 }
 
-int updateYubikeyEntry(void) {
-    uint8_t ticket_enc_key[256];
-    uint8_t ticket_enc_hash[32];
-    uint8_t i;
-    ykdb_entry tmp_entry;
-
-    printf("Updating Yubikey entry for %s\n", user_text);
-
-    if ( ykdbEntryGet(handle, &tmp_entry) != YKDB_SUCCESS )
-        return 1;
-
-    /* decrypt entry before updating */
-    safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
-
-    if ( tmp_entry.flags & YKDB_TOKEN_ENC_PUBLIC_UID ) {
-        safeSnprintfAppend((char *)ticket_enc_key, 256, "|", public_uid_bin);
-        for(i=0; i<public_uid_bin_size; i++)
-            safeSnprintfAppend((char *)ticket_enc_key, 256, "%02x", public_uid_bin[i]);
-    }
-    
-    if ( tmp_entry.flags & YKDB_TOKEN_ENC_PASSCODE ) {
-        /* obtain and store the second factor passcode if not already defined */
-        passcode_text = getInput("Yubikey passcode: ", 256, -1, GETLINE_FLAGS_ECHO_OFF);
-        
-        if (passcode_text != NULL) {
-            getSHA256((const uint8_t *)passcode_text, strlen((const char *)passcode_text), (uint8_t *)&entry.passcode_hash);
-            safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode_text);
-        }
-    
-        if ( memcmp(tmp_entry.passcode_hash, entry.passcode_hash, 32) )
-            return 1;
-    }
-    
-    safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");
-
-    getSHA256((const uint8_t *)ticket_enc_key, strlen((const char *)ticket_enc_key), ticket_enc_hash);
-    aesDecryptCBC((uint8_t *)&tmp_entry.ticket, sizeof(ykdb_entry_ticket), ticket_enc_key, ticket_enc_key+16);
-
-    return 0;
-}
-
 int deleteYubikeyEntry(void) {
     uint8_t ticket_enc_key[256];
     uint8_t ticket_enc_hash[32];
@@ -418,8 +373,8 @@ int deleteYubikeyEntry(void) {
 int main (int argc, char *argv[]) {
     char *progname = NULL;
     int amroot = 0;
-    uint8_t user_exists = 0;
     struct passwd *pw;
+    int user_exist = 0;
 
     /* save the program name */
     progname = argv[0];
@@ -435,29 +390,15 @@ int main (int argc, char *argv[]) {
 
     amroot = ( getuid() == 0 );
 
-    /* if no user specified use calling user */
-    if (NULL == user_text) {
-        /* get passwd structure for current user */
-        pw = getpwuid(getuid());
-
-        if (NULL == pw) {
-            fprintf(stderr, "Can't determine your user name\n");
-            clean();
-            exit(EXIT_FAILURE);
-        }
-
-        user_text = strdup(pw->pw_name);
-    }
-
     /* show usage when in USAGE mode or no user was provided */
-    if (mode == MODE_USAGE || NULL == user_text) {
-        showUsage(progname);
-        clean();
-        exit(EXIT_FAILURE);
-    } else if (mode == MODE_VERSION) {
+    if (mode == MODE_VERSION) {
         showVersion("ykpasswd - Yubikey OTP/Passcode Utility");
         clean();
         exit(EXIT_SUCCESS);
+    } else if (mode == MODE_USAGE || user_text == NULL) {
+        showUsage(progname);
+        clean();
+        exit(EXIT_FAILURE);
     }
 
     /* set additional default values for the entry after parsing */
@@ -511,29 +452,36 @@ int main (int argc, char *argv[]) {
             clean();
             exit(EXIT_FAILURE);
         }
-    } else if (mode == MODE_UPDATE) {
-        /* can't update when one doesn't exist */
-        if (!user_exists) {
-            fprintf(stderr, "Entry for %s does not exist.\n", user_text);
-            clean();
-            exit(EXIT_FAILURE);
-        }
-
-        if ( updateYubikeyEntry() != 0) {
-            clean();
-            exit(EXIT_FAILURE);
-        }
     } else if (mode == MODE_DELETE) {
-        /* can't delete when one doesn't exist */
-        if (!user_exists) {
-            fprintf(stderr, "Entry for %s does not exist.\n", user_text);
-            clean();
-            exit(EXIT_FAILURE);
-        }
-
-        if ( deleteYubikeyEntry() != 0 ) {
-            clean();
-            exit(EXIT_FAILURE);
+        if (public_uid_text != NULL) {
+            if ( getPublicUID() != 0 ) {
+                clean();
+                exit(EXIT_FAILURE);
+            }
+            /* can't delete when one doesn't exist */
+            if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS ) {
+                fprintf(stderr, "Entry for user \"%s\" and public UID does not exist.\n", user_text);
+                clean();
+                exit(EXIT_FAILURE);
+            }
+            if ( deleteYubikeyEntry() != 0 ) {
+                clean();
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            /* We don't have a public uid so remove all entries for specified user */
+            while ( ykdbEntrySeekOnUserHash(handle, (uint8_t *)&entry.user_hash, YKDB_SEEK_START) == YKDB_SUCCESS ) {
+                if ( deleteYubikeyEntry() != 0 ) {
+                    clean();
+                    exit(EXIT_FAILURE);
+                }
+                user_exist++;
+            }
+            if (user_exist == 0) {
+                fprintf(stderr, "Entry for user \"%s\" does not exist.\n", user_text);
+                clean();
+                exit(EXIT_FAILURE);
+            }
         }
     }
     /* sync to the yubikey */

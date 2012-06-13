@@ -149,7 +149,7 @@ int main (int argc, char *argv[]) {
     if ( mode & (MODE_SEARCH_USER | MODE_SEARCH_PUBLIC | MODE_SEARCH_INDEX | MODE_DUMP_ALL) ) {
         /* check if we have privelege to update users information */
         if ( !amroot ) {
-            fprintf(stderr, "You need root provileges to dump the yubikey database.\n");
+            fprintf(stderr, "You need root privileges to dump the yubikey database.\n");
             exit(EXIT_FAILURE);
         }
     
