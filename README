@@ -28,7 +28,21 @@ GNU/Linux, Solaris and Mac OS X for user authentication.
 
 
 -------------------------------------------------------------------------------
-3. Configuration
+3. Build
+-------------------------------------------------------------------------------
+
+Build the YubiPAM module by using autotools. First generate the configure file
+  $ autoreconf -i
+
+You should run the configure file which will generate the Makefile. Run make
+to build the YubiPAM module.
+  $ ./configure
+  $ make
+  $ sudo make install
+
+
+-------------------------------------------------------------------------------
+4. Configuration
 -------------------------------------------------------------------------------
 
 Install it in your PAM setup by adding a line to an appropriate file in the
@@ -53,7 +67,7 @@ Supported PAM module parameters are:
                    pam modules like pam_ecryptfs.
 
 -------------------------------------------------------------------------------
-4. Utilities
+5. Utilities
 -------------------------------------------------------------------------------
 
 ykpasswd
@@ -96,7 +110,7 @@ NOT.
 
 
 -------------------------------------------------------------------------------
-5. Troubleshooting
+6. Troubleshooting
 -------------------------------------------------------------------------------
 
 In the event that the YubiPAM module is not working it may pay to enable debug
