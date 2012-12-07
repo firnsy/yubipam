@@ -1,4 +1,3 @@
-
 -------------------------------------------------------------------------------
 1. YubiPAM Introduction
 -------------------------------------------------------------------------------
@@ -39,6 +38,11 @@ to build the YubiPAM module.
   $ ./configure
   $ make
   $ sudo make install
+  $ addgroup yubiauth
+  $ touch /etc/yubikey
+  $ chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
+  $ chmod g+rw /etc/yubikey
+  $ chmod g+s /sbin/yk_chkpwd
 
 
 -------------------------------------------------------------------------------
