@@ -1089,7 +1089,7 @@ char *getInput(const char *prompt, int size, int required, uint8_t flags) {
         if (bytes_read >= size)
             answer[size] = '\0';
         else
-            answer[bytes_read-1] = '\0';
+            answer[bytes_read] = '\0';
     }
 
     /* restore terminal */
