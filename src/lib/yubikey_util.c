@@ -55,6 +55,8 @@
 #include "yubikey_common.h"
 #include "yubikey_util.h"
 
+// for freebsd
+#include <sys/resource.h>
 
 // start SHA256 requisites - lookup table, defines, etc
 typedef struct _sha256_context {
@@ -1088,8 +1090,6 @@ char *getInput(const char *prompt, int size, int required, uint8_t flags) {
     if ( NULL != answer ) {
         if (bytes_read >= size)
             answer[size] = '\0';
-        else
-            answer[bytes_read-1] = '\0';
     }
 
     /* restore terminal */
@@ -1204,4 +1204,3 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
         syslog(LOG_DEBUG, "returning %d", retval);
     return retval;
 }
-

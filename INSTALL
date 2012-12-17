@@ -10,10 +10,8 @@ The quick install notes for getting people up and running in with minimal fuss
 are below. Detailed instructions will follow later.
 
 If there is no ./configure create one with autotools:
-$ aclocal
-$ autoconf 
-$ autoheader 
-$ automake --add-missing
+
+$ autoreconf --install
 
 1.   *** Make sure you have PAM library HEADERS installed!!! ***
 2.   ./configure
@@ -108,5 +106,3 @@ The simplest way to compile this package is:
       for the package's developers.  If you use it, you may have to get
       all sorts of other programs in order to regenerate files that came
       with the distribution.
-
-

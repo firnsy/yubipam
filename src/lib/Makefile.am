@@ -9,5 +9,4 @@ yubikey_util.c yubikey_util.h \
 yubikey_err.h yubikey_err.c
 
 AM_CFLAGS = -Wall
-INCLUDES = -I../
-
+AM_CPPFLAGS = -I../

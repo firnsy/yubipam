@@ -9,9 +9,8 @@ pam_yubikey_la_LDFLAGS = -module -avoid-version
 pam_yubikey_la_LIBADD = lib/libyubipam.la -lpam
 
 AM_CFLAGS = -Wall
-INCLUDES = -Ilib
+AM_CPPFLAGS = -Ilib
 
 install-data-hook:
 	-rm $(DESTDIR)$(libdir)/pam_yubikey.la
 	-rm $(DESTDIR)$(libdir)/pam_yubikey.a
-

@@ -98,3 +98,4 @@ dnl Generate made files
 AC_CONFIG_FILES([Makefile src/Makefile src/lib/Makefile src/utils/Makefile])
 AC_OUTPUT
 
+AC_CONFIG_MACRO_DIR([m4])
