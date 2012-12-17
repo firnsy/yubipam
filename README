@@ -38,11 +38,11 @@ to build the YubiPAM module.
   $ ./configure
   $ make
   $ sudo make install
-  $ addgroup yubiauth
-  $ touch /etc/yubikey
-  $ chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
-  $ chmod g+rw /etc/yubikey
-  $ chmod g+s /sbin/yk_chkpwd
+  $ sudo addgroup yubiauth
+  $ sudo touch /etc/yubikey
+  $ sudo chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
+  $ sudo chmod g+rw /etc/yubikey
+  $ sudo chmod g+s /sbin/yk_chkpwd
 
 
 -------------------------------------------------------------------------------
