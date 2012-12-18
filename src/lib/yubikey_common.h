@@ -41,6 +41,10 @@
 
 #define YKDB_FILE "/etc/yubikey"
 
+#define YK_SUCCESS 0
+#define YK_FAILURE 1
+#define YK_PASSCODE 128
+
 // slot entries
 #define	SLOT_CONFIG 1
 #define	SLOT_NAV 2

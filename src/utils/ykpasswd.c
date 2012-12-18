@@ -394,11 +394,11 @@ int main (int argc, char *argv[]) {
     if (mode == MODE_VERSION) {
         showVersion("ykpasswd - Yubikey OTP/Passcode Utility");
         clean();
-        exit(EXIT_SUCCESS);
+        exit(YK_SUCCESS);
     } else if (mode == MODE_USAGE || user_text == NULL) {
         showUsage(progname);
         clean();
-        exit(EXIT_FAILURE);
+        exit(YK_FAILURE);
     }
 
     /* set additional default values for the entry after parsing */
@@ -410,14 +410,14 @@ int main (int argc, char *argv[]) {
     if (NULL == pw) {
         fprintf(stderr, "Unknown user: %s\n", user_text);
         clean();
-        exit(EXIT_FAILURE);
+        exit(YK_FAILURE);
     }
 
     /* check if we have privelege to update users information */
     if ( !amroot && pw->pw_uid != getuid() ) {
         fprintf(stderr, "You may not view or modify yubikey information for %s\n", user_text);
         clean();
-        exit(EXIT_FAILURE);
+        exit(YK_FAILURE);
     }
 
     /* get perms */
@@ -431,7 +431,7 @@ int main (int argc, char *argv[]) {
         if (handle == NULL) {
             printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
     }
 
@@ -439,48 +439,48 @@ int main (int argc, char *argv[]) {
         /* require unique Public UID when adding an already existing user */
         if ( getPublicUID() != 0 ) {
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
 
         if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) == YKDB_SUCCESS ) {
             fprintf(stderr, "Entry for user \"%s\" and public UID already exist.\n", user_text);
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
 
         if ( addYubikeyEntry() != 0 ) {
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
     } else if (mode == MODE_DELETE) {
         if (public_uid_text != NULL) {
             if ( getPublicUID() != 0 ) {
                 clean();
-                exit(EXIT_FAILURE);
+                exit(YK_FAILURE);
             }
             /* can't delete when one doesn't exist */
             if ( ykdbEntrySeekOnUserPublicHash(handle, (uint8_t *)&entry.user_hash, (uint8_t *)&entry.public_uid_hash, YKDB_SEEK_START) != YKDB_SUCCESS ) {
                 fprintf(stderr, "Entry for user \"%s\" and public UID does not exist.\n", user_text);
                 clean();
-                exit(EXIT_FAILURE);
+                exit(YK_FAILURE);
             }
             if ( deleteYubikeyEntry() != 0 ) {
                 clean();
-                exit(EXIT_FAILURE);
+                exit(YK_FAILURE);
             }
         } else {
             /* We don't have a public uid so remove all entries for specified user */
             while ( ykdbEntrySeekOnUserHash(handle, (uint8_t *)&entry.user_hash, YKDB_SEEK_START) == YKDB_SUCCESS ) {
                 if ( deleteYubikeyEntry() != 0 ) {
                     clean();
-                    exit(EXIT_FAILURE);
+                    exit(YK_FAILURE);
                 }
                 user_exist++;
             }
             if (user_exist == 0) {
                 fprintf(stderr, "Entry for user \"%s\" does not exist.\n", user_text);
                 clean();
-                exit(EXIT_FAILURE);
+                exit(YK_FAILURE);
             }
         }
     }

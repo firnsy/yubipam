@@ -150,7 +150,7 @@ int main (int argc, char *argv[]) {
         /* check if we have privelege to update users information */
         if ( !amroot ) {
             fprintf(stderr, "You need root privileges to dump the yubikey database.\n");
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
     
         /* Get perms */
@@ -160,7 +160,7 @@ int main (int argc, char *argv[]) {
         handle = ykdbDatabaseOpenReadOnly(dbname);
         if (handle == NULL) {
             printf("Unable to access the database: %s [%d]\n", dbname, ykdb_errno);
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
     }
 
@@ -169,7 +169,7 @@ int main (int argc, char *argv[]) {
     if ( entry_count == 0 ) {
         printf("The database is empty.\n");
         free(handle);
-        exit(EXIT_SUCCESS);
+        exit(YK_SUCCESS);
     }
 
     if ( mode & MODE_SEARCH_INDEX ) {
@@ -250,14 +250,14 @@ int main (int argc, char *argv[]) {
     } else {
         showUsage(progname);
         free(handle);
-        exit(EXIT_FAILURE);
+        exit(YK_FAILURE);
     }
 
     /* close the db */
     ykdbDatabaseClose(handle);
 
     free(handle);
-    exit(EXIT_SUCCESS);
+    exit(YK_SUCCESS);
     return 0;
 }
 

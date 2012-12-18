@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
             if ( NULL == pw ) {
                 fprintf(stderr, "Can't determine your user name!\n");
                 clean();
-                exit(EXIT_FAILURE);
+                exit(YK_FAILURE);
             }
             
             user = strdup(pw->pw_name);
@@ -130,20 +130,20 @@ int main(int argc, char *argv[]) {
         if ( NULL == pw ) {
             fprintf(stderr, "Unknown user: %s\n", user);
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
      
         if (otp == NULL) {
             fprintf(stderr, "You must at least provide an OTP!\n\n");
             showUsage(progname);
             clean();
-            exit(EXIT_FAILURE);
+            exit(YK_FAILURE);
         }
 
         snprintf(otp_passcode, 128, "%s|", otp ? otp:"");
         ret = _yubi_run_helper_binary(otp_passcode, user, debug);
 
-        if (ret == 128) {
+        if (ret == YK_PASSCODE) {
             /* Need passcode */
             passcode = getInput("Yubikey passcode: ", 64, -1, GETLINE_FLAGS_ECHO_OFF);
             snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");

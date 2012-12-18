@@ -1112,7 +1112,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
     if (pipe(fds) != 0) {
         if (debug)
             syslog(LOG_DEBUG, "could not make pipe");
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     sighandler = signal(SIGCHLD, SIG_DFL);
@@ -1154,7 +1154,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
        
         /* should not get here: exit with error */
         syslog(LOG_ERR, "helper binary is not available");
-        exit(EXIT_FAILURE);
+        exit(YK_FAILURE);
     } else if (child > 0) {
         /* wait for child
          * if the stored OTP/passcode is NULL */
@@ -1165,7 +1165,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
                 if (debug)
                     syslog(LOG_DEBUG, "cannot send OTP/passcode to helper");
                 close(fds[1]);
-                retval = EXIT_FAILURE;
+                retval = YK_FAILURE;
             }
             otp_passcode = NULL;
         } else {
@@ -1173,7 +1173,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
                 if (debug)
                     syslog(LOG_DEBUG, "cannot send OTP/passcode to helper");
                 close(fds[1]);
-                retval = EXIT_FAILURE;
+                retval = YK_FAILURE;
             }
         }
 
@@ -1184,7 +1184,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
 
         if (rc < 0) {
             syslog(LOG_ERR, "%s: yk_chkpwd waitpid returned %d: %m", __FUNCTION__, rc);
-            retval = EXIT_FAILURE;
+            retval = YK_FAILURE;
         } else {
             retval = WEXITSTATUS(retval);
         }
@@ -1193,7 +1193,7 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
             syslog(LOG_DEBUG, "fork failed");
         close(fds[0]);
         close(fds[1]);
-        retval = EXIT_FAILURE;
+        retval = YK_FAILURE;
     }
 
     if (sighandler != SIG_ERR) {

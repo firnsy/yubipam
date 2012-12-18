@@ -209,7 +209,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
 
     retval = _yubi_run_helper_binary(otp_passcode, user, debug);
 
-    if (retval == 128) {
+    if (retval == YK_PASSCODE) {
         /* need passcode */
         passcode = get_response(pamh, "Yubikey passcode", user, 0);
 

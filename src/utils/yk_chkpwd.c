@@ -160,7 +160,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
             strncpy(passcode, pch+1, passcode_len);
     } else {
         syslog(LOG_AUTH, "invalid otp/passcode received: %s", otp_passcode ? otp_passcode:"");
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
     
     if (debug)
@@ -173,7 +173,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     if (public_uid_bin_size <= 0) {
         if (debug)
             syslog(LOG_DEBUG, "public_uid has no length, OTP is invalid");
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     /* set additional default values for the entry after parsing */
@@ -184,7 +184,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     if (handle == NULL) {
         if (debug)
             syslog(LOG_DEBUG, "couldn't access database: %s", CONFIG_AUTH_DB_DEFAULT);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
     
     /* seek to public UID if it exists */
@@ -193,14 +193,14 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         if (debug)
             syslog(LOG_DEBUG, "no entry for user (with that token): %s", user);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     /* grab the entry */
     if ( ykdbEntryGet(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
      
     /* start building decryption entry as required */
@@ -221,7 +221,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
             /* passcode needed but not given */
             ykdbDatabaseClose(handle);
             free(handle);
-            return 128;
+            return YK_PASSCODE;
         }
     }
 
@@ -251,7 +251,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         if (debug)
             syslog(LOG_DEBUG, "crc invalid: 0x%04x", crc);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     /* hash decrypted private uid */
@@ -263,7 +263,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         if (debug)
             syslog(LOG_DEBUG, "private uid mismatch");
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     /* check counter deltas */
@@ -275,7 +275,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         if (debug)
             syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Possible replay!!!", delta_session);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
     
     if ( delta_session == 0 && delta_button <= 0 ) {
@@ -283,7 +283,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         if (debug)
             syslog(LOG_DEBUG, "OTP is INVALID. Session delta: %d. Button delta: %d. Possible replay!!!", delta_session, delta_button);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
     
     /* update the database entry with the latest counters */
@@ -302,11 +302,11 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     if ( ykdbEntryWrite(handle, &entry) != YKDB_SUCCESS ) {
         ykdbDatabaseClose(handle);
         free(handle);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     free(handle);
-    return EXIT_SUCCESS;
+    return YK_SUCCESS;
 }
 
 
@@ -314,7 +314,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
 int main(int argc, char *argv[]) {
     char pass[MAXPASS + 1];
     int npass;
-    int retval = EXIT_FAILURE;
+    int retval = YK_FAILURE;
     int debug = 0;
     int ch;
     char *user = NULL;
@@ -355,7 +355,7 @@ int main(int argc, char *argv[]) {
             ,"This binary is not designed for running in this way\n"
              "-- the system administrator has been informed\n");
         sleep(10);    // this should discourage/annoy the user
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
 
     /*
@@ -371,7 +371,7 @@ int main(int argc, char *argv[]) {
             syslog(LOG_AUTH
                 ,"mismatch of %s|%s", user, getuidname(getuid()));
             free(user);
-            return EXIT_FAILURE;
+            return YK_FAILURE;
         }
     }
 
@@ -390,10 +390,11 @@ int main(int argc, char *argv[]) {
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
 
     /* return pass or fail */
-    if ((retval != EXIT_SUCCESS) && (retval != 128)) {
-        syslog(LOG_AUTH, "OTP/passcode check failed for user (%s)", user);
+    if ((retval != YK_SUCCESS) && (retval != YK_PASSCODE)) {
+        if (debug)
+            syslog(LOG_AUTH, "OTP/passcode check failed for user (%s)", user);
         free(user);
-        return EXIT_FAILURE;
+        return YK_FAILURE;
     }
     
     free(user);
