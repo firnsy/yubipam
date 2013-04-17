@@ -237,15 +237,19 @@ int checkHexString(const uint8_t *src) {
  *
  * Arguments:
  *   const uint8_t *src            source containing modhex characters
+ *   const char    *trans          modhex translation string (NULL for default)
  *
  * Return
  *   0 if source is a modhex string, non-zero otherwise.
  */
-int checkModHexString(const uint8_t *src) {
-    char trans[] = MODHEX_MAP;
+int checkModHexString(const uint8_t *src, const char *trans) {
     uint32_t src_size = strlen((const char *)src);
     uint32_t i;
- 
+
+    if (trans == NULL) {
+      trans = MODHEX_MAP;
+    }
+
     for(i=0; i<src_size; i++, src++) {
         if ( strchr(trans, tolower(*src)) == NULL )
             return 1;
@@ -265,11 +269,13 @@ int checkModHexString(const uint8_t *src) {
  * Arguments:
  *   const uint8_t *otp            source containing modhex characters
  *   uint8_t min_pub_uid_len      minimum length of the public_uid (fixed portion)
+ *   const char    *trans          modhex translation string (NULL for default)
  *
  * Return
  *   0 if source is compliant, non-zero otherwise.
  */
-int checkOTPCompliance(const uint8_t *otp, uint32_t min_pub_uid_len) {
+int checkOTPCompliance(const uint8_t *otp, uint32_t min_pub_uid_len,
+                       const char *trans) {
     uint32_t otp_size;
     
     /* check if OTP exists */
@@ -283,7 +289,7 @@ int checkOTPCompliance(const uint8_t *otp, uint32_t min_pub_uid_len) {
         return -2;
 
     /* check modhex character set */
-    if ( checkModHexString(otp) )
+    if ( checkModHexString(otp, trans) )
         return -3;
 
     return 0;
@@ -347,16 +353,21 @@ uint32_t hexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size) {
  *   uint8_t *dst                destination of decoded binary information
  *   const uint8_t *src            source containing modhex characters
  *   uint32_t dst_size            number of bytes to read into destination buffer
+ *   const char    *trans          modhex translation string (NULL for default)
  *
  * Return
  *   Number of modhex characters processed
  */
-uint32_t modHexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size) {
-    static const char trans[] = MODHEX_MAP;
+uint32_t modHexDecode(uint8_t *dst, const uint8_t *src, uint32_t dst_size,
+                      const char* trans) {
     uint8_t b;
     uint32_t i, processed = 0;
     uint32_t src_size = strlen((const char *)src);
     char *p1;
+
+    if (trans == NULL) {
+      trans = MODHEX_MAP;
+    }
 
     /* truncate source if destination is too short */
     if ((dst_size << 1) < src_size)
@@ -698,11 +709,12 @@ uint16_t getCRC(const uint8_t *data, uint32_t size) {
  *   uint8_t *public_uid_size   byte size of the public UID
  *   const uint8_t *otp            source OTP in modhex format (>=32 chars)
  *   const uint8_t *otp            AES decryptino key in hex format (16 bytes)
+ *   const char    *trans          modhex translation string (NULL for default)
  *
  * Returns:
  *   Return 0 on success, non zero otherwise.
  */
-int parseOTP(yk_ticket *tkt, uint8_t *public_uid, uint8_t *public_uid_size, const uint8_t *otp, const uint8_t *key) {
+int parseOTP(yk_ticket *tkt, uint8_t *public_uid, uint8_t *public_uid_size, const uint8_t *otp, const uint8_t *key, const char *trans) {
     uint8_t otp_bin[PUBLIC_UID_BYTE_SIZE + sizeof(yk_ticket)];
     uint32_t otp_bin_size;
     uint16_t crc;
@@ -711,8 +723,8 @@ int parseOTP(yk_ticket *tkt, uint8_t *public_uid, uint8_t *public_uid_size, cons
     if ( !checkHexString(otp) ) {
         if ((otp_bin_size = hexDecode(otp_bin, otp, sizeof(otp_bin))) < sizeof(yk_ticket))
             return 1;
-    } else if ( !checkModHexString(otp) ) {
-        if ((otp_bin_size = modHexDecode(otp_bin, otp, sizeof(otp_bin))) < sizeof(yk_ticket))
+    } else if ( !checkModHexString(otp, trans) ) {
+        if ((otp_bin_size = modHexDecode(otp_bin, otp, sizeof(otp_bin), trans)) < sizeof(yk_ticket))
             return 1;
     } else {
         return 1;
@@ -1204,3 +1216,4 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
         syslog(LOG_DEBUG, "returning %d", retval);
     return retval;
 }
+

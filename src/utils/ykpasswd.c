@@ -157,7 +157,7 @@ void parseCommandLine(int argc, char *argv[]) {
 
 int getPublicUID(void) {
     if (NULL != otp)
-        parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, NULL);
+        parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, NULL, NULL);
         
     /* obtain the private_uid if not already defined and store the hash */
     if ( NULL == public_uid_text && public_uid_bin_size <= 0 ) {
@@ -174,13 +174,13 @@ int getPublicUID(void) {
 
             public_uid_bin_size = hexDecode(public_uid_bin, (const uint8_t *)public_uid_text, PUBLIC_UID_BYTE_SIZE);
         /* decode the public uid if in modhex format */
-        } else if ( ! checkModHexString((const uint8_t *)public_uid_text) ) {
+        } else if ( ! checkModHexString((const uint8_t *)public_uid_text, NULL) ) {
             if ( strlen(public_uid_text) > 32 ) {
                 printf("Public UID is too long! Max of 32 modhex chars allowed.\n");
                 return -1;
             }
 
-            public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)public_uid_text, PUBLIC_UID_BYTE_SIZE);
+            public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)public_uid_text, PUBLIC_UID_BYTE_SIZE, NULL);
         } else {
             printf("Public UID [%s] must be in hex format!\n", public_uid_text);
             return -1;
@@ -209,8 +209,8 @@ int addYubikeyEntry(void) {
     if (NULL != key_text) {
         if ( !checkHexString((const uint8_t *)key_text) )
             hexDecode((uint8_t *)&entry.ticket.key, (const uint8_t *)key_text, KEY_BYTE_SIZE);
-        else if ( ! checkModHexString((const uint8_t *)key_text) )
-            modHexDecode((uint8_t *)&entry.ticket.key, (const uint8_t *)key_text, KEY_BYTE_SIZE);
+        else if ( ! checkModHexString((const uint8_t *)key_text, NULL) )
+            modHexDecode((uint8_t *)&entry.ticket.key, (const uint8_t *)key_text, KEY_BYTE_SIZE, NULL);
         else {
             printf("Invalid key specified!\n");
             return -1;
@@ -224,7 +224,7 @@ int addYubikeyEntry(void) {
     /* with a valid key */
     if ( NULL != otp ) {
         /* decode the OTP */
-        if ( parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, entry.ticket.key ) != 0 ) {
+        if ( parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, entry.ticket.key, NULL) != 0 ) {
             printf("Invalid OTP specified!\n");
             return -1;
         }
@@ -261,8 +261,8 @@ int addYubikeyEntry(void) {
     if ( NULL != private_uid_text && private_uid_bin_size <= 0 ) {
         if ( ! checkHexString((const uint8_t *)private_uid_text) )
             hexDecode(private_uid_bin, (const uint8_t *)private_uid_text, PRIVATE_UID_BYTE_SIZE);
-        else if ( ! checkModHexString((const uint8_t *)private_uid_text) )
-            modHexDecode(private_uid_bin, (const uint8_t *)private_uid_text, PRIVATE_UID_BYTE_SIZE);
+        else if ( ! checkModHexString((const uint8_t *)private_uid_text, NULL) )
+            modHexDecode(private_uid_bin, (const uint8_t *)private_uid_text, PRIVATE_UID_BYTE_SIZE, NULL);
         else {
             printf("Invalid UID specified!\n");
             return -1;

@@ -66,6 +66,19 @@ static int selinux_enabled=-1;
 
 #define MAXPASS 129 /* the maximum length of a OTP/passcode */
 
+/* TO ADD ADDITIONAL KEYMAPS:
+ * Add another entry to the KEYMAPS array
+ * Switch to your layout of choice
+ * type the default keys on your keyboard (cbedef...) for the array elements
+ * Note that you will need to enroll any keys using the default keymap.
+ * (you may find contrib/convert-modhex-to-keymap.py convenient) */
+
+#define N_KEYMAPS (sizeof KEYMAPS / sizeof KEYMAPS[0])
+const static char* KEYMAPS[] = {"cbdefghijklnrtuv",  /* default (qwerty, azerty, etc) */
+                                "jxe.uidchtnbpygk",  /* English Dvorak */
+                                "cbsftdhuneikpglv",  /* Engilsh Colemak */
+};
+
 static void su_sighandler(int sig) {
 #ifndef SA_RESETHAND
     /* emulate the behaviour of the SA_RESETHAND flag */
@@ -116,8 +129,27 @@ static char *getuidname(uid_t uid) {
     return username;
 }
 
+int _yubi_verify_otp_passcode(char *user, char *otp, int debug, int guess_keymap)
+{
+    if (!guess_keymap)
+        return _yubi_verify_otp_passcode_helper(user, otp, debug, NULL);
+    else
+    {
+        int i;
+        for (i = 0; i < N_KEYMAPS; i++)
+        {
+            /* If asked to guess, we test all keymaps that might succeed and permit
+             * if *any* of them do. */
+            int res = _yubi_verify_otp_passcode_helper(user, otp, debug, KEYMAPS[i]);
+            if (YK_SUCCESS == res)
+                return res;
+        }
+        return YK_FAILURE;
+    }
+}
 
-int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
+int _yubi_verify_otp_passcode_helper(char *user, char *otp_passcode, int debug,
+                                     const char* trans) {
     int i;
 
     yk_ticket tkt;
@@ -167,7 +199,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         syslog(LOG_DEBUG, "OTP: %s (%d), Passcode: %s (%d)", otp, otp_len, passcode, passcode_len);
 
     /* perform initial parse to grab public UID */
-    parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, NULL);
+    parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, NULL, trans);
      
     /* OTP needs the public UID for lookup */
     if (public_uid_bin_size <= 0) {
@@ -202,7 +234,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         free(handle);
         return YK_FAILURE;
     }
-     
+
     /* start building decryption entry as required */
     safeSnprintf((char *)ticket_enc_key, 256, "TICKET_ENC_KEY_BEGIN");
      
@@ -239,7 +271,7 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     }
  
     /* perform real parse to grab real ticket, using the now unecrypted key */
-    parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, (uint8_t *)&entry.ticket.key);
+    parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (uint8_t *)otp, (uint8_t *)&entry.ticket.key, trans);
  
     /* check CRC matches */
     crc = getCRC((uint8_t *)&tkt, sizeof(yk_ticket));
@@ -384,7 +416,7 @@ int main(int argc, char *argv[]) {
         syslog(LOG_DEBUG, "OTP/passcode too long");
     } else {
         pass[npass] = '\0';    /* NUL terminate */
-        retval = _yubi_verify_otp_passcode(user, pass, debug);
+        retval = _yubi_verify_otp_passcode(user, pass, debug, 1);
     }
 
     memset(pass, '\0', MAXPASS);    /* clear memory of the OTP/passcode */
