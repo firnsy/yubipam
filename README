@@ -70,6 +70,24 @@ Supported PAM module parameters are:
                    passcode. This can be very handy when you are using other
                    pam modules like pam_ecryptfs.
 
+Most keyboard layouts will work out of the box, as Yubico designed the
+keypresses used by the Yubikey to be the same on many layouts (qwerty,
+azerty, etc). Some layouts, however, such as Dvorak and Colemak do not
+share the same character mapping. English Dvorak and Colemak will work
+out of the box for authentication, as will any other keymaps you add.
+
+However, when using ykpasswd with a keymap other than one compatible with
+standard modhex, you must ensure that the OTP given to -o is in modhex 
+(this is to ensure you enroll the key that you meant to.)
+
+Thus, you should either temporarily switch your keyboard layout to qwerty
+before running ykpasswd to enroll users, or use the provided layout conversion
+script contrib/convert-modhex-to-keymap.py to convert from your layout of
+choice to modhex.
+
+To add support for additional keymaps, edit utils/yk_chkpwd.c and add your
+keymap(s) of choice to the KEYMAPS array.
+
 -------------------------------------------------------------------------------
 5. Utilities
 -------------------------------------------------------------------------------

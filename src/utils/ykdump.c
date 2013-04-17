@@ -108,8 +108,8 @@ void parseCommandLine(int argc, char *argv[]) {
                     getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
 
-                } else if ( !checkModHexString((const uint8_t *)optarg) ) {
-                    public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE);
+                } else if ( !checkModHexString((const uint8_t *)optarg, NULL) ) {
+                    public_uid_bin_size = modHexDecode(public_uid_bin, (const uint8_t *)optarg, PUBLIC_UID_BYTE_SIZE, NULL);
                     getSHA256(public_uid_bin, public_uid_bin_size, (uint8_t *)&entry.public_uid_hash);
                     mode |= MODE_SEARCH_PUBLIC;
                 } else {

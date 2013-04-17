@@ -49,8 +49,8 @@ int safeStrnlen(const char *buf, int buf_size);
 char *getInput(const char *prompt, int size, int required, uint8_t flags);
 int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debug);
 int checkHexString(const uint8_t *);
-int checkModHexString(const uint8_t *);
-int checkOTPCompliance(const uint8_t *, uint32_t);
+int checkModHexString(const uint8_t *, const char *);
+int checkOTPCompliance(const uint8_t *, uint32_t, const char *);
 
 /* cipher/ routines */
 void aesEncryptBlock(uint8_t *, const uint8_t *);
@@ -61,9 +61,9 @@ void getSHA256(const uint8_t *, uint32_t, uint8_t *);
 uint16_t getCRC(const uint8_t *, uint32_t);
 
 /* yubikey routines */
-uint32_t modHexDecode(uint8_t *, const uint8_t *, uint32_t);
+uint32_t modHexDecode(uint8_t *, const uint8_t *, uint32_t, const char *);
 uint32_t modHexEncode(uint8_t *, const uint8_t *, uint32_t);
-int parseOTP(yk_ticket *, uint8_t *, uint8_t *, const uint8_t *, const uint8_t *);
+int parseOTP(yk_ticket *, uint8_t *, uint8_t *, const uint8_t *, const uint8_t *, const char *);
 void printTicket(yk_ticket *);
 
 #endif
