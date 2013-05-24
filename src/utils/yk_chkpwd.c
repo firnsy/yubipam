@@ -64,7 +64,7 @@ static int selinux_enabled=-1;
 #define SELINUX_ENABLED 0
 #endif
 
-#define MAXPASS 129 /* the maximum length of a OTP/passcode */
+#define MAXPASS 128 /* the maximum length of a OTP/passcode */
 
 static void su_sighandler(int sig) {
 #ifndef SA_RESETHAND
@@ -125,8 +125,8 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
     ykdb_h *handle;
     
     char *pch;
-    char otp[64] = "";    // max 12-char public-id, 32-char otp
-    char passcode[64] = "";
+    char otp[65] = "";    // max 12-char public-id, 32-char otp
+    char passcode[65] = "";
 
     uint8_t tkt_private_uid_hash[32];
 
@@ -153,8 +153,10 @@ int _yubi_verify_otp_passcode(char *user, char *otp_passcode, int debug) {
         otp_len = pch-otp_passcode;
         passcode_len = strlen(otp_passcode) - otp_len - 1;
 
-        if ( otp_len > 0 )
+        if ( otp_len > 0 ) {
             strncpy(otp, otp_passcode, otp_len);
+            otp[otp_len] = '\0';
+        }
 
         if ( passcode_len > 0 )
             strncpy(passcode, pch+1, passcode_len);

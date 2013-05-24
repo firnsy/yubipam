@@ -102,7 +102,8 @@ int main(int argc, char *argv[]) {
     char *progname = NULL;
     int ret = 0;
 
-    char otp_passcode[128];
+    // OTP 64 bytes + ' ' separator + Passcode 64 bytes + null terminator
+    char otp_passcode[64 + 1 + 64 + 1];
     char *passcode = NULL;
 
     struct passwd *pw;
@@ -140,13 +141,13 @@ int main(int argc, char *argv[]) {
             exit(YK_FAILURE);
         }
 
-        snprintf(otp_passcode, 128, "%s|", otp ? otp:"");
+        snprintf(otp_passcode, 66, "%s|", otp ? otp:"");
         ret = _yubi_run_helper_binary(otp_passcode, user, debug);
 
         if (ret == YK_PASSCODE) {
             /* Need passcode */
             passcode = getInput("Yubikey passcode: ", 64, -1, GETLINE_FLAGS_ECHO_OFF);
-            snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+            snprintf(otp_passcode, 130, "%s|%s", otp ? otp:"", passcode ? passcode:"");
             ret = _yubi_run_helper_binary(otp_passcode, user, debug);
         }
         free(passcode);
