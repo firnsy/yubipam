@@ -58,17 +58,36 @@ and ensure pam_yubikey.so is located in /lib/security/
 
 Supported PAM module parameters are:
 
-  "debug": enable debug.
-  "verbose_otp": enable echoing of the OTP, after all it's only a one time pad.
-  "include_users": enable yubikey auth for users in the given file. Eash line
-                   can contain one user.
-                   Ex: include_users=/etc/yubikey.users
-  "exclude_users": disable yubikey auth for users in the given file. Eash line
-                   can contain one user.
-                   Ex: exclude_users=/etc/yubikey.users
-  "passcode_only": instead of the OTP, pam authtok will only contain the
-                   passcode. This can be very handy when you are using other
-                   pam modules like pam_ecryptfs.
+  debug
+        enable debug.
+
+  verbose_otp
+        enable echoing of the OTP, after all it's only a one time pad.
+
+  include_users
+        enable yubikey auth for users in the given file. Eash line
+        can contain one user.
+        Ex: include_users=/etc/yubikey.users
+
+  exclude_users
+        disable yubikey auth for users in the given file. Eash line
+        can contain one user.
+        Ex: exclude_users=/etc/yubikey.users
+
+  passcode_only
+        instead of the OTP, pam authtok will only contain the
+        passcode. This can be very handy when you are using other
+        pam modules like pam_ecryptfs.
+
+  combined_passcode_otp
+        allows user to enter passcode+OTP on a single prompt line.
+        Useful for services that don't work with multiple prompt two-factor
+        auth (e.g. certain screensavers, X display managers)
+        The passcode and OTP must be separated with a single space.
+
+  discreet_prompt
+        emulate the default Unix password prompt, to avoid indicating
+        a Yubikey is to be used
 
 -------------------------------------------------------------------------------
 5. Utilities

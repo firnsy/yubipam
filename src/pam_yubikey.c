@@ -120,7 +120,11 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
     else
         msg.msg_style = PAM_PROMPT_ECHO_OFF;
 
-    sprintf (buffer, "%s (%s): ", prompt, user);
+    if (prompt) {
+        sprintf(buffer, "%s (%s): ", prompt, user);
+    } else {
+        strcpy(buffer, "Password: ");
+    }
 
     /* set up the conversation */
     msg.msg = buffer;
@@ -150,6 +154,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     const char *user = NULL;
     char *otp = NULL;
     char *passcode = NULL;
+    char *marker = NULL;
     char otp_passcode[128];
     int i = 0;
     int debug = 0;
@@ -157,6 +162,8 @@ pam_sm_authenticate (pam_handle_t *pamh,
     char *include_users = NULL;
     char *exclude_users = NULL;
     int passcode_only = 0;
+    int combined_passcode_otp = 0;
+    int discreet_prompt = 0;
 
     for (i=0; i<argc; i++) {
         if (strncmp(argv[i], "debug", 5) == 0)
@@ -169,6 +176,10 @@ pam_sm_authenticate (pam_handle_t *pamh,
             exclude_users = index(argv[i], '=') + 1;
         else if (strncmp(argv[i], "passcode_only", 13) == 0)
             passcode_only = 1;
+        else if (strncmp(argv[i], "combined_passcode_otp", 21) == 0)
+            combined_passcode_otp = 1;
+        else if (strncmp(argv[i], "discreet_prompt", 15) == 0)
+            discreet_prompt = 1;
         if (debug)
             syslog(LOG_DEBUG, "argv[%d]=%s", i, argv[i]);
     }
@@ -201,21 +212,27 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     /* prompt for the Yubikey OTP (always) */
-    otp = get_response(pamh, "Yubikey OTP", user, verbose_otp);
+    otp = get_response(pamh, discreet_prompt ? NULL : "Yubikey OTP", user, verbose_otp);
 
-    snprintf(otp_passcode, 128, "%s|", otp ? otp:"");
-    if (debug)
-        syslog(LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode));
+    if (combined_passcode_otp) {
+        if ( NULL != (marker=strchr(otp, ' ')) ) {
+            *marker++ = '\0';
+            passcode = otp;
+            otp = marker;   /* OTP at end, since Yubikey appends '\n' by default */
+        }
+    }
+
+    snprintf(otp_passcode, 130, "%s|%s", otp ? otp:"", passcode ? passcode:"");
+    if (debug && otp)
+        syslog(LOG_DEBUG, "OTP received: %s (length %d)", otp, (int)strlen(otp));
 
     retval = _yubi_run_helper_binary(otp_passcode, user, debug);
 
-    if (retval == YK_PASSCODE) {
+    if (retval == YK_PASSCODE && !combined_passcode_otp) {
         /* need passcode */
-        passcode = get_response(pamh, "Yubikey passcode", user, 0);
+        passcode = get_response(pamh, discreet_prompt ? NULL : "Yubikey passcode", user, 0);
 
-        snprintf(otp_passcode, 128, "%s|%s", otp ? otp:"", passcode ? passcode:"");
-        if (debug)
-            syslog(LOG_DEBUG, "pass: %s (%d)", otp_passcode, (int)strlen(otp_passcode));
+        snprintf(otp_passcode, 130, "%s|%s", otp ? otp:"", passcode ? passcode:"");
 
         retval = _yubi_run_helper_binary(otp_passcode, user, debug);
     }
