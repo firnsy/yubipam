@@ -64,7 +64,7 @@ static int selinux_enabled=-1;
 #define SELINUX_ENABLED 0
 #endif
 
-#define MAXPASS 128 /* the maximum length of a OTP/passcode */
+#define MAXPASS 129 /* the maximum length of a OTP/passcode */
 
 /* TO ADD ADDITIONAL KEYMAPS:
  * Add another entry to the KEYMAPS array
@@ -129,19 +129,16 @@ static char *getuidname(uid_t uid) {
     return username;
 }
 
-int _yubi_verify_otp_passcode(char *user, char *otp, int debug, int guess_keymap)
-{
+int _yubi_verify_otp_passcode(char *user, char *otp, int debug, int guess_keymap) {
     if (!guess_keymap)
         return _yubi_verify_otp_passcode_helper(user, otp, debug, NULL);
-    else
-    {
+    else {
         int i;
-        for (i = 0; i < N_KEYMAPS; i++)
-        {
+        for (i = 0; i < N_KEYMAPS; i++) {
             /* If asked to guess, we test all keymaps that might succeed and permit
              * if *any* of them do. */
             int res = _yubi_verify_otp_passcode_helper(user, otp, debug, KEYMAPS[i]);
-            if (YK_SUCCESS == res)
+            if (YK_SUCCESS == res||YK_PASSCODE == res)
                 return res;
         }
         return YK_FAILURE;

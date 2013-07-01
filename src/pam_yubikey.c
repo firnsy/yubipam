@@ -155,7 +155,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     char *otp = NULL;
     char *passcode = NULL;
     char *marker = NULL;
-    char otp_passcode[128];
+    char otp_passcode[130];
     int i = 0;
     int debug = 0;
     int verbose_otp = 0;
@@ -215,7 +215,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     otp = get_response(pamh, discreet_prompt ? NULL : "Yubikey OTP", user, verbose_otp);
 
     if (combined_passcode_otp) {
-        if ( NULL != (marker=strchr(otp, ' ')) ) {
+        if ( NULL != (marker=strchr(otp, '|')) ) {
             *marker++ = '\0';
             passcode = otp;
             otp = marker;   /* OTP at end, since Yubikey appends '\n' by default */

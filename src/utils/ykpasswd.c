@@ -160,9 +160,8 @@ int getPublicUID(void) {
         parseOTP(&tkt, public_uid_bin, &public_uid_bin_size, (const uint8_t *)otp, NULL, NULL);
         
     /* obtain the private_uid if not already defined and store the hash */
-    if ( NULL == public_uid_text && public_uid_bin_size <= 0 ) {
+    if ( NULL == public_uid_text && public_uid_bin_size <= 0 )
         public_uid_text = getInput("Public UID [max 32 hex chars]: ", 32, -1, GETLINE_FLAGS_DEFAULT);
-    }
 
     if ( NULL != public_uid_text && public_uid_bin_size <= 0 ) {
         /* decode the public uid if in hex format */
@@ -286,6 +285,7 @@ int addYubikeyEntry(void) {
     if ( entry.flags & YKDB_TOKEN_ENC_PASSCODE ) {
         /* obtain and store the second factor passcode if not already defined */
         passcode_text = getInput("Passcode: ", 256, -1, GETLINE_FLAGS_ECHO_OFF);
+        printf("\n");
         
         if ( NULL != passcode_text ) {
             getSHA256((const uint8_t *)passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
@@ -341,14 +341,17 @@ int deleteYubikeyEntry(void) {
     if ( tmp_entry.flags & YKDB_TOKEN_ENC_PASSCODE ) {
         /* obtain and store the second factor passcode if not already defined */
         passcode_text = getInput("Passcode: ", 256, -1, GETLINE_FLAGS_ECHO_OFF);
+        printf("\n");
         
         if (passcode_text != NULL) {
             getSHA256((const uint8_t *)passcode_text, strlen(passcode_text), (uint8_t *)&entry.passcode_hash);
             safeSnprintfAppend((char *)ticket_enc_key, 256, "|%s", passcode_text);
         }
     
-        if ( memcmp(tmp_entry.passcode_hash, entry.passcode_hash, 32) )
+        if ( memcmp(tmp_entry.passcode_hash, entry.passcode_hash, 32) ) {
+            printf("Passcode failed!\n");
             return 1;
+        }
     }
     
     safeSnprintfAppend((char *)ticket_enc_key, 256, "|TICKET_ENC_KEY_END");

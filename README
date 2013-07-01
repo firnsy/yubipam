@@ -83,7 +83,7 @@ Supported PAM module parameters are:
         allows user to enter passcode+OTP on a single prompt line.
         Useful for services that don't work with multiple prompt two-factor
         auth (e.g. certain screensavers, X display managers)
-        The passcode and OTP must be separated with a single space.
+        The passcode and OTP must be separated with a single | character
 
   discreet_prompt
         emulate the default Unix password prompt, to avoid indicating
