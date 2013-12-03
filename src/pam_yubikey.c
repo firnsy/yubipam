@@ -135,14 +135,14 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
         return NULL;
 
     if (retval != PAM_SUCCESS) {
-        free(resp->resp);
-        free(resp);
+        //free(resp->resp);
+        //free(resp);
         return NULL;
     }
 
     response = resp->resp;
 	
-    free(resp);
+    //free(resp);
     return response;
 }
 
