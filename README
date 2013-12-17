@@ -40,9 +40,9 @@ to build the YubiPAM module.
   $ sudo make install
   $ sudo addgroup yubiauth
   $ sudo touch /etc/yubikey
-  $ sudo chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
+  $ sudo chgrp yubiauth /etc/yubikey /usr/local/sbin/yk_chkpwd
   $ sudo chmod g+rw /etc/yubikey
-  $ sudo chmod g+s /sbin/yk_chkpwd
+  $ sudo chmod g+s /usr/local/sbin/yk_chkpwd
 
 
 -------------------------------------------------------------------------------
