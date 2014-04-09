@@ -19,9 +19,9 @@ $ autoreconf --install
 4.   make install
 5.   addgroup yubiauth
 6.   touch /etc/yubikey
-7.   chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd
+7.   chgrp yubiauth /etc/yubikey /usr/local/sbin/yk_chkpwd
 8.   chmod g+rw /etc/yubikey
-9.   chmod g+s /sbin/yk_chkpwd
+9.   chmod g+s /usr/local/sbin/yk_chkpwd
 10.  update the appropriate /etc/pam.d/* file (see README)
 11.  Have fun!
 
@@ -90,13 +90,13 @@ The simplest way to compile this package is:
   6.  Touch the database file with "touch /etc/yubikey" in the event it has
       not yet been created.
 
-  7.  Change the groups of "/etc/yubikey" and "/sbin/yk_chkpwd" to allow
+  7.  Change the groups of "/etc/yubikey" and "/usr/local/sbin/yk_chkpwd" to allow
       unified editing of the database with 
-	  "chgrp yubiauth /etc/yubikey /sbin/yk_chkpwd"
+	  "chgrp yubiauth /etc/yubikey /usr/local/sbin/yk_chkpwd"
 
   8.  chmod g+rw /etc/yubikey
 
-  9.  chmod g+s /sbin/yk_chkpwd
+  9.  chmod g+s /usr/local/sbin/yk_chkpwd
 
   10. You can remove the program binaries and object files from the
       source code directory by typing "make clean".  To also remove the

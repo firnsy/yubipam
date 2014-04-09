@@ -129,22 +129,6 @@ static char *getuidname(uid_t uid) {
     return username;
 }
 
-int _yubi_verify_otp_passcode(char *user, char *otp, int debug, int guess_keymap) {
-    if (!guess_keymap)
-        return _yubi_verify_otp_passcode_helper(user, otp, debug, NULL);
-    else {
-        int i;
-        for (i = 0; i < N_KEYMAPS; i++) {
-            /* If asked to guess, we test all keymaps that might succeed and permit
-             * if *any* of them do. */
-            int res = _yubi_verify_otp_passcode_helper(user, otp, debug, KEYMAPS[i]);
-            if (YK_SUCCESS == res||YK_PASSCODE == res)
-                return res;
-        }
-        return YK_FAILURE;
-    }
-}
-
 int _yubi_verify_otp_passcode_helper(char *user, char *otp_passcode, int debug,
                                      const char* trans) {
     int i;
@@ -338,6 +322,22 @@ int _yubi_verify_otp_passcode_helper(char *user, char *otp_passcode, int debug,
 
     free(handle);
     return YK_SUCCESS;
+}
+
+int _yubi_verify_otp_passcode(char *user, char *otp, int debug, int guess_keymap) {
+    if (!guess_keymap)
+        return _yubi_verify_otp_passcode_helper(user, otp, debug, NULL);
+    else {
+        int i;
+        for (i = 0; i < N_KEYMAPS; i++) {
+            /* If asked to guess, we test all keymaps that might succeed and permit
+             * if *any* of them do. */
+            int res = _yubi_verify_otp_passcode_helper(user, otp, debug, KEYMAPS[i]);
+            if (YK_SUCCESS == res||YK_PASSCODE == res)
+                return res;
+        }
+        return YK_FAILURE;
+    }
 }
 
 

@@ -1153,7 +1153,10 @@ int _yubi_run_helper_binary(const char *otp_passcode, const char *user, int debu
         if (geteuid() == 0) {
             /* must set the real uid to 0 so the helper will not error
              * out if pam is called from setuid binary (su, sudo...) */
-            setuid(0);
+            if (setuid(0) != 0) {
+                syslog(LOG_ERR, "setuid(0) failed");
+                exit(YK_FAILURE);
+            }
         }
        
         /* exec binary helper */

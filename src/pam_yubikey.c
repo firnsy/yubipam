@@ -129,20 +129,18 @@ char *get_response(pam_handle_t *pamh, const char *prompt, const char *user, int
     /* set up the conversation */
     msg.msg = buffer;
     msgp = &msg;
+    resp = NULL;
+    response = NULL;
     retval = (*conv->conv)(1, &msgp, &resp, conv->appdata_ptr);
-
-    if (resp == NULL) 
-        return NULL;
-
-    if (retval != PAM_SUCCESS) {
-        free(resp->resp);
+    if (resp != NULL) {
+        if (retval == PAM_SUCCESS) {
+            response = resp->resp;
+        } else {
+            free(resp->resp);
+        }
         free(resp);
-        return NULL;
     }
 
-    response = resp->resp;
-	
-    free(resp);
     return response;
 }
 

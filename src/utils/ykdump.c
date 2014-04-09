@@ -154,7 +154,10 @@ int main (int argc, char *argv[]) {
         }
     
         /* Get perms */
-        setregid( getegid(), -1 );
+        if (setregid( getegid(), -1 ) != 0) {
+            fprintf(stderr, "Function setregid() failed\n");
+            exit(YK_FAILURE);
+        }
 
         /* open the db or create if empty */
         handle = ykdbDatabaseOpenReadOnly(dbname);
