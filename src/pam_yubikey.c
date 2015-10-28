@@ -236,11 +236,11 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     if (retval == EXIT_SUCCESS) {
-        if ((passcode_only != 0) && (passcode != NULL)) {
-            retval = pam_set_item(pamh, PAM_AUTHTOK, passcode);
-        } else {
-            retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
-        }
+        /* if ((passcode_only != 0) && (passcode != NULL)) { */
+        /*     retval = pam_set_item(pamh, PAM_AUTHTOK, passcode); */
+        /* } else { */
+        /*     retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode); */
+        /* } */
         if (retval != PAM_SUCCESS) {
             if (debug)
                 syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
