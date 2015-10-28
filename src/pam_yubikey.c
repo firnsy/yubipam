@@ -160,6 +160,7 @@ pam_sm_authenticate (pam_handle_t *pamh,
     char *include_users = NULL;
     char *exclude_users = NULL;
     int passcode_only = 0;
+    int no_passcode = 0;
     int combined_passcode_otp = 0;
     int discreet_prompt = 0;
 
@@ -174,6 +175,8 @@ pam_sm_authenticate (pam_handle_t *pamh,
             exclude_users = index(argv[i], '=') + 1;
         else if (strncmp(argv[i], "passcode_only", 13) == 0)
             passcode_only = 1;
+	else if (strncmp(argv[i], "no_passcode", 11) == 0)
+            no_passcode = 1;
         else if (strncmp(argv[i], "combined_passcode_otp", 21) == 0)
             combined_passcode_otp = 1;
         else if (strncmp(argv[i], "discreet_prompt", 15) == 0)
@@ -236,16 +239,18 @@ pam_sm_authenticate (pam_handle_t *pamh,
     }
 
     if (retval == EXIT_SUCCESS) {
-        if ((passcode_only != 0) && (passcode != NULL)) {
-            retval = pam_set_item(pamh, PAM_AUTHTOK, passcode);
-        } else {
-            retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
-        }
-        if (retval != PAM_SUCCESS) {
-            if (debug)
-                syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
-            return retval;
-        }
+	if (no_passcode == 0) {
+	    if ((passcode_only != 0) && (passcode != NULL)) {
+		retval = pam_set_item(pamh, PAM_AUTHTOK, passcode);
+	    } else {
+		retval = pam_set_item(pamh, PAM_AUTHTOK, otp_passcode);
+	    }
+	    if (retval != PAM_SUCCESS) {
+		if (debug)
+		    syslog(LOG_DEBUG, "set_item returned error: %s", pam_strerror (pamh, retval));
+		return retval;
+	    }
+	}
         return PAM_SUCCESS;
     }
     
