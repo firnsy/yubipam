@@ -74,6 +74,11 @@ Supported PAM module parameters are:
         can contain one user.
         Ex: exclude_users=/etc/yubikey.users
 
+  no_passcode
+	instructs the module to not save the pam authtok to allow for
+	two-factor authentication with other pam modules such as pam_ecryptfs
+	which is configured to use the user's passphrase.
+
   passcode_only
         instead of the OTP, pam authtok will only contain the
         passcode. This can be very handy when you are using other
